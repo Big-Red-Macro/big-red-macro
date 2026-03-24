@@ -34,6 +34,7 @@ class MenuItem(EmbeddedDocument):
     is_halal = BooleanField(default=False)
     is_gluten_free = BooleanField(default=False)
     station = StringField()  # e.g. "Grill", "Salad Bar", "International"
+    healthy = BooleanField(default=False)  # Cornell Dining "healthy" flag from API
 
 
 class DiningHall(Document):
@@ -53,6 +54,8 @@ class DiningHall(Document):
     supports_get_app = BooleanField(default=False)  # order-ahead via GET
     operating_hours = DictField()  # {"breakfast": "7:00-10:30", ...}
     building_code = StringField()  # for geofencing
+    campus_area = StringField()  # e.g. "North", "West", "Central", "East"
+    eatery_id = IntField()  # Cornell Dining API numeric ID
 
 
 class DailyMenu(Document):

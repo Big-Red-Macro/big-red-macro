@@ -92,7 +92,7 @@ STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORNELL_DINING_API_BASE = os.getenv(
-    "CORNELL_DINING_API_BASE", "https://now.dining.cornell.edu/api/1.0"
+    "CORNELL_DINING_API_BASE", "https://admin-now.dining.cornell.edu/api/1.0"
 )
 
 CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -101,5 +101,9 @@ CELERY_BEAT_SCHEDULE = {
     "refresh-daily-menus": {
         "task": "api.tasks.refresh_daily_menus",
         "schedule": 3600,  # every hour
+    },
+    "retrain-wait-time-model": {
+        "task": "api.tasks.retrain_wait_time_model",
+        "schedule": 86400,  # nightly — needs ≥30 WaitTimeSample docs to produce a model
     },
 }
