@@ -10,6 +10,7 @@ from typing import Optional
 import logging
 
 from api.models import DailyMenu, DiningHall, Macros, MealPlan, UserProfile
+from api.ml.item_scorer import build_user_history, score_item
 
 logger = logging.getLogger(__name__)
 
@@ -62,24 +63,18 @@ def _item_passes_filters(item, profile: UserProfile) -> bool:
     return True
 
 
-def _score_item(item, period_goal: dict) -> float:
-    """Score an item by how well it contributes toward the period's macro goal.
-
-    Higher protein density relative to calorie budget is rewarded.
-    Items far over the calorie target for the period are penalized.
-    """
-    if not item.macros or item.macros.calories == 0:
-        return 0.0
-    protein_density = item.macros.protein_g / max(item.macros.calories, 1)
-    calorie_fit = 1 - abs(item.macros.calories - period_goal["calories"] * 0.4) / max(
-        period_goal["calories"], 1
-    )
-    return protein_density * 0.6 + calorie_fit * 0.4
-
-
-def _greedy_select(candidates: list, period_goal: dict, max_items: int = 5) -> list:
+def _greedy_select(
+    candidates: list,
+    period_goal: dict,
+    max_items: int = 5,
+    user_history: dict | None = None,
+) -> list:
     """Greedily pick items from a list to approach the period macro goal."""
-    scored = sorted(candidates, key=lambda i: _score_item(i, period_goal), reverse=True)
+    scored = sorted(
+        candidates,
+        key=lambda i: score_item(i, period_goal, user_history),
+        reverse=True,
+    )
     selected = []
     running = {"calories": 0.0, "protein_g": 0.0, "carbs_g": 0.0, "fat_g": 0.0}
 
@@ -115,6 +110,7 @@ class MealPlannerService:
             calories=2000, protein_g=150, carbs_g=200, fat_g=65
         )
 
+        user_history = build_user_history(profile.django_user_id)
         meals = []
         total = {"calories": 0.0, "protein_g": 0.0, "carbs_g": 0.0, "fat_g": 0.0}
 
@@ -144,7 +140,7 @@ class MealPlannerService:
                 if not candidates:
                     continue
 
-                selected = _greedy_select(candidates, period_goal)
+                selected = _greedy_select(candidates, period_goal, user_history=user_history)
                 if not selected:
                     continue
 
@@ -165,6 +161,7 @@ class MealPlannerService:
                             {
                                 "name": i.name,
                                 "station": i.station,
+                                "category": i.category,
                                 "macros": _macros_to_dict(i.macros) if i.macros else {},
                             }
                             for i in selected
