@@ -351,19 +351,21 @@ class CornellDiningClient:
         payment = self._payment_flags(eatery)
         campus_area = (eatery.get("campusArea") or {}).get("descrshort", "")
 
-        hall, _ = DiningHall.objects.get_or_create(
-            name=eatery.get("name", "Unknown"),
-            defaults={
-                "short_name":      eatery.get("slug") or eatery.get("nameshort", ""),
-                "location_lat":    float(coords.get("latitude") or eatery.get("latitude") or 0),
-                "location_lng":    float(coords.get("longitude") or eatery.get("longitude") or 0),
-                "dining_type":     self._dining_type(eatery),
-                "campus_area":     campus_area,
-                "eatery_id":       int(eatery.get("id") or 0),
-                "operating_hours": self._operating_hours_summary(eatery),
-                **payment,
-            },
-        )
+        hall_name = eatery.get("name", "Unknown")
+        defaults = {
+            "short_name":      eatery.get("slug") or eatery.get("nameshort", ""),
+            "location_lat":    float(coords.get("latitude") or eatery.get("latitude") or 0),
+            "location_lng":    float(coords.get("longitude") or eatery.get("longitude") or 0),
+            "dining_type":     self._dining_type(eatery),
+            "campus_area":     campus_area,
+            "eatery_id":       int(eatery.get("id") or 0),
+            "operating_hours": self._operating_hours_summary(eatery),
+            **payment,
+        }
+        hall = DiningHall.objects(name=hall_name).first()
+        if not hall:
+            hall = DiningHall(name=hall_name, **defaults)
+            hall.save()
 
         # Refresh mutable fields on every ingest (hours and payment flags can change)
         update_kwargs = {
