@@ -1,8 +1,8 @@
-# 🐻 Big Red Macro
+# Big Red Macro
 
 **Big Red Macro** is an intelligent, AI-driven dining planner built exclusively for Cornell University students. It seamlessly connects real-time data from the Cornell Dining API with your Google Calendar to generate hyper-personalized daily meal itineraries that perfectly balance your academic schedule, dietary restrictions, and macro goals.
 
-## ✨ Features
+## Some Features
 
 - **Real-Time Cornell Dining Aggregation:** Automatically scrapes the Cornell Open Data API to build daily local menus and cache hall operating hours.
 - **Smart Dining Dashboard:** Explore all open and closed campus dining halls. View their active menus, check what dining plans they accept (Swipes vs. BRBs), and explicitly filter by campus area (North, West, Central).
@@ -13,7 +13,7 @@
   - It analyzes your free-time gaps and forcefully constraints itself to plan out your Breakfast, Lunch, and Dinner—strictly targeting your dietary restrictions (e.g. Vegan, Halal) and aggressively pushing menu options you marked as your favorites.
 - **Cornell-Native Aesthetic:** A premium UI utilizing deep Cornell Red gradients and modern glassmorphism.
 
-## 🛠️ Technology Stack
+## Stack
 
 - **Frontend:** Vue 3, Vite, Tailwind CSS (Custom Cornell Red `.cornell-red`), Pinia, Vue Router.
 - **Backend:** Python, Django REST Framework, Django-MongoEngine.
@@ -21,15 +21,15 @@
 - **AI Infrastructure:** Google GenAI SDK (`gemini-2.5-flash`), heavily engineered LangChain Prompt Templates.
 - **External Integrations:** Google Calendar Data API, Cornell Open Data Initiative REST API.
 
-## 🚀 Getting Started (Local Development)
+## Getting Started for(Local Development)
 
 Big Red Macro is fully containerized using Docker. 
 
-### Prerequisites
+### needed
 - Docker and Docker Compose installed.
 - A valid `.env` file placed inside the `/backend` directory containing your Google OAuth keys and Gemini API keys. 
 
-### Booting the Architecture
+### Booting
 
 1. From the project root, launch the orchestration:
    ```bash
