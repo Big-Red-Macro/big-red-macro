@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apiClient } from '../api/client'
+import api from '../api'
 
 export const useMainStore = defineStore('main', () => {
   const isConnectedToCalendar = ref(false)
@@ -13,7 +13,7 @@ export const useMainStore = defineStore('main', () => {
   // Fetch Auth URL
   const getConnectUrl = async () => {
     try {
-      const response = await apiClient.get('/calendar/connect/')
+      const response = await api.get('/calendar/connect/')
       return response.data.auth_url
     } catch (e) {
       console.error("Failed to generate connect URL", e)
@@ -23,11 +23,11 @@ export const useMainStore = defineStore('main', () => {
   }
 
   // Receive callback
-  const submitCalendarCode = async (code) => {
+  const submitCalendarCode = async (code, state) => {
     isLoading.value = true
     try {
       // For local demo, we might get a token dictionary back
-      const res = await apiClient.get('/calendar/callback/', { params: { code } })
+      const res = await api.get('/calendar/callback/', { params: { code, state } })
       tokenDict.value = res.data.token_dict
       isConnectedToCalendar.value = true
     } catch (e) {
@@ -43,7 +43,7 @@ export const useMainStore = defineStore('main', () => {
     isLoading.value = true
     try {
       const body = { google_auth_token: tokenDict.value || {} }
-      const res = await apiClient.post('/meal-plan/generate-ai/', body)
+      const res = await api.post('/meal-plan/generate-ai/', body)
       if (res.data.ai_plan && !res.data.ai_plan.error) {
         itinerary.value = res.data.ai_plan
       } else {

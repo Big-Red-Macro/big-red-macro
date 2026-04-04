@@ -50,6 +50,7 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_BASE=/api
+      - PROXY_TARGET=http://backend:8000
 
 volumes:
   mongo_data:

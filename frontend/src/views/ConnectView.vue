@@ -1,12 +1,12 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-slate-900 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-indigo-900/20 to-rose-900/20 p-6">
+  <div class="min-h-screen flex items-center justify-center bg-slate-900 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-red-900/20 to-red-900/20 p-6">
     
     <div class="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
-      <div class="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-rose-500/20 blur-[80px]"></div>
-      <div class="absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-indigo-500/20 blur-[80px]"></div>
+      <div class="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-red-500/20 blur-[80px]"></div>
+      <div class="absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-red-500/20 blur-[80px]"></div>
 
       <div class="relative z-10 flex flex-col items-center text-center">
-        <div class="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-indigo-600 shadow-lg shadow-rose-500/30">
+        <div class="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg shadow-red-500/30">
           <svg class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
@@ -23,7 +23,7 @@
           <span>Connect Google Calendar</span>
         </button>
 
-        <p v-if="error" class="mt-4 text-xs font-medium text-rose-400">{{ error }}</p>
+        <p v-if="error" class="mt-4 text-xs font-medium text-red-400">{{ error }}</p>
       </div>
     </div>
   </div>

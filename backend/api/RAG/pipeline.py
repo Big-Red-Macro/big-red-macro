@@ -57,6 +57,16 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
     else:
         macro_text = "Balanced diet, ~2000 calories"
 
+    preferences_str = ""
+    if profile.dietary_restrictions:
+        preferences_str += f"- Dietary Restrictions: {', '.join(profile.dietary_restrictions)}\n"
+    if profile.allergens:
+        preferences_str += f"- Allergens to avoid: {', '.join(profile.allergens)}\n"
+    if profile.favorite_meals:
+        preferences_str += f"- Favorite foods to prioritize: {', '.join(profile.favorite_meals)}\n"
+    if not preferences_str:
+        preferences_str = "No specific dietary restrictions or favorites."
+
     gaps_str = json.dumps(gaps, indent=2)
 
     # 3. Setup LangChain + Gemini
@@ -68,15 +78,18 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are an expert AI meal planning assistant for Cornell students. "
                    "You must provide a structured daily meal itinerary based on the user's schedule gaps, "
-                   "macro goals, and the menus available at Cornell dining halls. "
+                   "their macro goals, their dietary restrictions and allergies, and the menus available at Cornell dining halls. "
+                   "You must strictly adhere to the user's dietary restrictions (e.g. if they are vegan, ONLY select vegan items). "
+                   "Try to incorporate their favorite foods if they are available on the menus today. "
                    "Return the result nicely formatted according to the required schema."),
-        ("human", "User's Macro Goals for the day: {macro_text}\n"
+        ("human", "User's Macro Goals: {macro_text}\n"
+                  "User's Dietary Preferences & Needs:\n{preferences_str}\n\n"
                   "User's Free Time Blocks (gaps in schedule): {gaps_str}\n"
                   "Target Date: {target_date}\n\n"
                   "Available Menus Highlight:\n{context_str}\n\n"
                   "Plan exactly one meal for each major time block (e.g. Breakfast, Lunch, Dinner) "
                   "if the gaps align with typical meal times. Pick specific items from the menus "
-                  "provided to hit the macro goals. Return the final structured output.")
+                  "provided to hit the macro goals and satisfy dietary needs. Return the final structured output.")
     ])
 
     structured_llm = llm.with_structured_output(DailyItinerary)
@@ -85,6 +98,7 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
     try:
         res: DailyItinerary = chain.invoke({
             "macro_text": macro_text,
+            "preferences_str": preferences_str,
             "gaps_str": gaps_str,
             "target_date": target_date,
             "context_str": context_str

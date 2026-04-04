@@ -43,6 +43,9 @@ class UserProfileSerializer(serializers.Serializer):
     dietary_restrictions = serializers.ListField(
         child=serializers.CharField(), default=list
     )
+    favorite_meals = serializers.ListField(
+        child=serializers.CharField(), default=list
+    )
     meal_plan_type = serializers.ChoiceField(
         choices=["traditional", "west_campus", "bear_necessities", "none"],
         default="traditional",

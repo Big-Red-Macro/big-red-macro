@@ -45,6 +45,7 @@ export const refreshToken = (refresh) =>
 // -- Profile --
 export const getProfile = () => api.get('/profile/')
 export const updateProfile = (data) => api.put('/profile/', data)
+export const toggleFavoriteMeal = (meal_name) => api.post('/profile/favorite-meal/', { meal_name })
 
 // -- Meal Plans --
 export const generateMealPlan = (date, location) =>

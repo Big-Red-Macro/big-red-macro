@@ -35,19 +35,22 @@ def get_authorization_url(redirect_uri: str):
             access_type='offline',
             include_granted_scopes='true'
         )
-        return authorization_url, state
+        return authorization_url, state, getattr(flow, 'code_verifier', None)
     except Exception as e:
         logger.error(f"Failed to generate Google auth URL: {e}")
-        return None, None
+        return None, None, None
 
-def exchange_code(code: str, redirect_uri: str) -> dict:
+def exchange_code(code: str, redirect_uri: str, code_verifier: str = None) -> dict:
     try:
         flow = Flow.from_client_config(
             get_client_config(),
             scopes=SCOPES,
             redirect_uri=redirect_uri
         )
-        flow.fetch_token(code=code)
+        kwargs = {}
+        if code_verifier:
+            kwargs['code_verifier'] = code_verifier
+        flow.fetch_token(code=code, **kwargs)
         credentials = flow.credentials
         return {
             'token': credentials.token,

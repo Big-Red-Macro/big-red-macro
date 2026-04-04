@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from django.core.cache import cache
 
 from api.models import DailyMenu, DiningHall, UserProfile, WaitTimeSample
 from api.serializers import (
@@ -85,6 +86,28 @@ def user_profile(request):
 
     profile.save()
     return Response(UserProfileSerializer(profile).data)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def toggle_favorite_meal(request):
+    """Toggle a meal name in the user's favorite_meals list."""
+    profile = UserProfile.objects(django_user_id=request.user.id).first()
+    if not profile:
+        profile = UserProfile(django_user_id=request.user.id)
+        profile.save()
+
+    meal_name = request.data.get("meal_name")
+    if not meal_name:
+        return Response({"detail": "meal_name is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if meal_name in profile.favorite_meals:
+        profile.favorite_meals.remove(meal_name)
+    else:
+        profile.favorite_meals.append(meal_name)
+
+    profile.save()
+    return Response({"favorite_meals": profile.favorite_meals})
+
 
 
 
@@ -194,8 +217,10 @@ def refresh_menus(request):
 @permission_classes([AllowAny])
 def calendar_connect(request):
     redirect_uri = "http://localhost:5173/calendar-callback"
-    url, state = get_authorization_url(redirect_uri)
+    url, state, code_verifier = get_authorization_url(redirect_uri)
     if url:
+        if code_verifier and state:
+            cache.set(f"pkce_{state}", code_verifier, timeout=600)
         return Response({"auth_url": url}, status=status.HTTP_200_OK)
     return Response({"error": "Failed to generate auth url"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -203,11 +228,14 @@ def calendar_connect(request):
 @permission_classes([AllowAny])
 def calendar_callback(request):
     code = request.GET.get('code') or request.data.get('code')
+    state = request.GET.get('state') or request.data.get('state')
     if not code:
         return Response({"error": "No code provided"}, status=status.HTTP_400_BAD_REQUEST)
     
+    code_verifier = cache.get(f"pkce_{state}") if state else None
+    
     redirect_uri = "http://localhost:5173/calendar-callback"
-    token_dict = exchange_code(code, redirect_uri)
+    token_dict = exchange_code(code, redirect_uri, code_verifier)
     if not token_dict:
         return Response({"error": "Failed to exchange token"}, status=status.HTTP_400_BAD_REQUEST)
     

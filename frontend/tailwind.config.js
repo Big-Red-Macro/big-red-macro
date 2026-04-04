@@ -10,6 +10,7 @@ export default {
         sans: ['Inter', 'sans-serif'],
       },
       colors: {
+        'cornell-red': '#B31B1B',
         slate: {
           850: '#151e2e',
           900: '#0f172a',

@@ -36,12 +36,12 @@ defineProps({
 const getColorText = (time) => {
   if (time < 10) return 'text-emerald-400'
   if (time < 20) return 'text-amber-400'
-  return 'text-rose-400'
+  return 'text-red-400'
 }
 
 const getColorBg = (time) => {
   if (time < 10) return 'bg-emerald-400'
   if (time < 20) return 'bg-amber-400'
-  return 'bg-rose-400'
+  return 'bg-red-400'
 }
 </script>
