@@ -5,7 +5,7 @@ from typing import List
 from datetime import date
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from api.models import UserProfile, DailyMenu
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
 
     # 3. Setup LangChain + Gemini
     llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
+        model="gemini-2.5-flash",
         temperature=0.2,
     )
     

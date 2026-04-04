@@ -191,9 +191,9 @@ def refresh_menus(request):
 # ------------------------------------------------------------------
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def calendar_connect(request):
-    redirect_uri = "http://localhost:8000/api/calendar/callback"
+    redirect_uri = "http://localhost:5173/calendar-callback"
     url, state = get_authorization_url(redirect_uri)
     if url:
         return Response({"auth_url": url}, status=status.HTTP_200_OK)
@@ -206,7 +206,7 @@ def calendar_callback(request):
     if not code:
         return Response({"error": "No code provided"}, status=status.HTTP_400_BAD_REQUEST)
     
-    redirect_uri = "http://localhost:8000/api/calendar/callback"
+    redirect_uri = "http://localhost:5173/calendar-callback"
     token_dict = exchange_code(code, redirect_uri)
     if not token_dict:
         return Response({"error": "Failed to exchange token"}, status=status.HTTP_400_BAD_REQUEST)
