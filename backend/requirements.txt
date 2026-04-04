@@ -19,3 +19,4 @@ google-auth-oauthlib
 langchain
 langchain-openai
 pydantic
+langchain-google-genai

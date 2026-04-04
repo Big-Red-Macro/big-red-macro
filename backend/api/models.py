@@ -115,6 +115,7 @@ class UserProfile(Document):
         choices=["traditional", "west_campus", "bear_necessities", "none"],
         default="traditional",
     )
+    google_auth_token = DictField()
     updated_at = DateTimeField(default=datetime.utcnow)
 
 

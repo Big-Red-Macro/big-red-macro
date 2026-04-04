@@ -16,11 +16,10 @@ from api.serializers import (
 from api.services.dining_api import CornellDiningClient
 from api.services.meal_planner import MealPlannerService
 from api.services.wait_time import WaitTimeService
+from api.services.calendar_api import get_authorization_url, exchange_code, get_free_time_blocks
+from api.RAG.pipeline import generate_rag_meal_plan
 
 
-# ------------------------------------------------------------------
-# Dining Halls
-# ------------------------------------------------------------------
 
 
 @api_view(["GET"])
@@ -53,9 +52,7 @@ def dining_hall_menu(request, hall_id: str):
     return Response(result)
 
 
-# ------------------------------------------------------------------
 # User Profile
-# ------------------------------------------------------------------
 
 
 @api_view(["GET", "PUT"])
@@ -90,9 +87,6 @@ def user_profile(request):
     return Response(UserProfileSerializer(profile).data)
 
 
-# ------------------------------------------------------------------
-# Meal Plan Generation
-# ------------------------------------------------------------------
 
 
 @api_view(["POST"])
@@ -129,9 +123,7 @@ def meal_plan_history(request):
     return Response(MealPlanSerializer(plans, many=True).data)
 
 
-# ------------------------------------------------------------------
 # Wait Times
-# ------------------------------------------------------------------
 
 
 @api_view(["GET"])
@@ -174,9 +166,7 @@ def record_checkin(request):
     return Response({"status": "recorded", "sample_id": str(sample.id)})
 
 
-# ------------------------------------------------------------------
 # Admin: Menu Refresh
-# ------------------------------------------------------------------
 
 
 @api_view(["POST"])
@@ -195,3 +185,55 @@ def refresh_menus(request):
     client = CornellDiningClient()
     count = client.ingest_all_menus(target_date)
     return Response({"ingested_periods": count, "date": target_date_str})
+
+# ------------------------------------------------------------------
+# AI / Calendar / RAG
+# ------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def calendar_connect(request):
+    redirect_uri = "http://localhost:8000/api/calendar/callback"
+    url, state = get_authorization_url(redirect_uri)
+    if url:
+        return Response({"auth_url": url}, status=status.HTTP_200_OK)
+    return Response({"error": "Failed to generate auth url"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def calendar_callback(request):
+    code = request.GET.get('code') or request.data.get('code')
+    if not code:
+        return Response({"error": "No code provided"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    redirect_uri = "http://localhost:8000/api/calendar/callback"
+    token_dict = exchange_code(code, redirect_uri)
+    if not token_dict:
+        return Response({"error": "Failed to exchange token"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response({
+        "message": "Successfully exchanged code. Use this token dictionary for AI generation.",
+        "token_dict": token_dict
+    }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_ai_meal_plan(request):
+    target_date = request.data.get("date", date.today().isoformat())
+    token_dict = request.data.get("google_auth_token", {})
+    
+    profile = UserProfile.objects(django_user_id=request.user.id).first()
+    if not profile:
+        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+    if token_dict and profile:
+        profile.google_auth_token = token_dict
+        profile.save()
+    elif not token_dict and profile.google_auth_token:
+        token_dict = profile.google_auth_token
+        
+    gaps = get_free_time_blocks(token_dict, None)
+    
+    result = generate_rag_meal_plan(profile, gaps, target_date)
+    return Response({"ai_plan": result}, status=status.HTTP_200_OK)
+
