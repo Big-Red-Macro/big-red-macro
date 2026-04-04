@@ -27,8 +27,10 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
     """
     Generate an AI-powered meal plan using Gemini 1.5 Flash and LangChain.
     """
-    # Force API key for this test
-    user_key = os.getenv("GEMINI_API_KEY", "AIzaSyAGGVx9iXQG7SnrmBpUm7OPfhs_5ZqklHE")
+    # Load API key from environment (set in .env)
+    user_key = os.getenv("GEMINI_API_KEY")
+    if not user_key:
+        raise ValueError("GEMINI_API_KEY is not set. Add it to your .env file.")
     os.environ["GOOGLE_API_KEY"] = user_key
     
     menus = DailyMenu.objects(date=target_date)
