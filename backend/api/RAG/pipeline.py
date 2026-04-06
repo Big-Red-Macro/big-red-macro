@@ -71,7 +71,7 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
 
     gaps_str = json.dumps(gaps, indent=2)
 
-    # 3. Setup LangChain + Gemini
+    # LangChain + Gemini
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         temperature=0.2,
