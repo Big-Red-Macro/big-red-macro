@@ -118,3 +118,37 @@ MongoEngine handles schema dynamically — all collections (including `notificat
 | **Neo4j Browser** | [http://localhost:7474](http://localhost:7474) |
 | **Neo4j Bolt** | `bolt://localhost:7687` |
 | **Redis** | `redis://localhost:6379` |
+
+### Viewing Your Databases
+
+#### MongoDB (menus, users, meal plans, notifications)
+
+Use [MongoDB Compass](https://www.mongodb.com/products/compass) (GUI):
+
+```bash
+brew install --cask mongodb-compass
+```
+
+Open Compass, connect to `mongodb://localhost:27017`, and click on the **bigredmacro** database. You'll see collections like `dining_halls`, `daily_menus`, `user_profiles`, `meal_plans`, `notifications`, etc.
+
+Or from the terminal:
+
+```bash
+mongosh mongodb://localhost:27017/bigredmacro
+```
+
+#### Neo4j (graph data — campus routing)
+
+Open [http://localhost:7474](http://localhost:7474) in your browser — that's the built-in Neo4j Browser UI. Sign in with username `neo4j` and password `bigredmacro`, then run Cypher queries visually:
+
+```cypher
+MATCH (n) RETURN n
+```
+
+#### SQLite (Django auth only — users, tokens, sessions)
+
+This is the small `backend/auth.db` file used only for Django's auth system. You can open it with [DB Browser for SQLite](https://sqlitebrowser.org/), or from the terminal:
+
+```bash
+sqlite3 backend/auth.db ".tables"
+```
