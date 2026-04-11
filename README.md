@@ -42,6 +42,7 @@ Then open `backend/.env` and configure:
 |---|---|---|
 | `SECRET_KEY` | Django signing key | Generate one: `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
 | `GOOGLE_API_KEY` | Powers the Vision pipeline (Gemini) + Google Calendar integration | Go to [Google AI Studio](https://aistudio.google.com/apikey) → Create an API key. Make sure the Gemini API is enabled. |
+| `MAPBOX_ACCESS_TOKEN` | Campus map and walking directions | Go to [Mapbox](https://account.mapbox.com/access-tokens/) → Create a token (the default public token works). |
 | `MONGODB_URI` | MongoDB connection string | Defaults to `mongodb://localhost:27017/bigredmacro`. Docker handles this automatically. |
 | `REDIS_URL` | Redis connection for Celery task queue | Defaults to `redis://localhost:6379/0`. Docker handles this automatically. |
 | `CORNELL_DINING_API_BASE` | Cornell Dining API base URL | Default: `https://now.dining.cornell.edu/api/1.0` |

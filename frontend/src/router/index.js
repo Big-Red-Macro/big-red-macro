@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DiningHallsView from '../views/DiningHallsView.vue'
 import MealPlannerView from '../views/MealPlannerView.vue'
+import CampusMapView from '../views/CampusMapView.vue'
 import ConnectView from '../views/ConnectView.vue'
 import CallbackView from '../views/CallbackView.vue'
 import Login from '../views/Login.vue'
@@ -32,6 +33,11 @@ const router = createRouter({
       path: '/planner',
       name: 'planner',
       component: MealPlannerView
+    },
+    {
+      path: '/map',
+      name: 'campus-map',
+      component: CampusMapView
     },
     {
       path: '/connect',
