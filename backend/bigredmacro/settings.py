@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 load_dotenv()
 
@@ -68,6 +69,11 @@ DATABASES = {
     }
 }
 
+# Neo4j Graph DB settings for Campus Routing
+NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -101,6 +107,10 @@ CELERY_BEAT_SCHEDULE = {
     "refresh-daily-menus": {
         "task": "api.tasks.refresh_daily_menus",
         "schedule": 3600,  # every hour
+    },
+    "check-favorites": {
+        "task": "api.tasks.check_favorites_and_notify",
+        "schedule": crontab(hour=4, minute=0),
     },
     "retrain-wait-time-model": {
         "task": "api.tasks.retrain_wait_time_model",
