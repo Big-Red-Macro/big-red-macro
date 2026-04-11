@@ -49,18 +49,6 @@
         </nav>
       </div>
 
-      <div class="p-3 lg:p-5">
-        <button
-          v-if="auth.isAuthenticated"
-          @click="doLogout"
-          class="flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium w-full transition-colors text-slate-500 hover:text-red-400 hover:bg-slate-800 justify-center lg:justify-start"
-        >
-          <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-          </svg>
-          <span class="hidden lg:block">Logout</span>
-        </button>
-      </div>
     </aside>
 
     <!-- Main Content -->
@@ -71,15 +59,7 @@
 </template>
 
 <script setup>
-import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const router = useRouter()
-const auth = useAuthStore()
-
-function doLogout() {
-  auth.logout()
-  router.push('/login')
-}
 </script>
