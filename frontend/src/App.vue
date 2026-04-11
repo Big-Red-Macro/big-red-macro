@@ -37,6 +37,17 @@
           </router-link>
 
           <router-link
+            to="/map"
+            class="flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+            active-class="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
+          >
+            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+            </svg>
+            <span class="hidden lg:block">Campus Map</span>
+          </router-link>
+
+          <router-link
             to="/connect"
             class="flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
             active-class="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"

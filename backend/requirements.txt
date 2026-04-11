@@ -21,4 +21,3 @@ langchain-openai
 pydantic
 langchain-core
 langchain-google-genai
-neo4j
