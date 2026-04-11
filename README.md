@@ -44,15 +44,12 @@ Then open `backend/.env` and configure:
 | `GOOGLE_API_KEY` | Powers the Vision pipeline (Gemini) + Google Calendar integration | Go to [Google AI Studio](https://aistudio.google.com/apikey) → Create an API key. Make sure the Gemini API is enabled. |
 | `MONGODB_URI` | MongoDB connection string | Defaults to `mongodb://localhost:27017/bigredmacro`. Docker handles this automatically. |
 | `REDIS_URL` | Redis connection for Celery task queue | Defaults to `redis://localhost:6379/0`. Docker handles this automatically. |
-| `NEO4J_URI` | Neo4j graph database connection (campus routing) | Defaults to `bolt://localhost:7687`. Docker handles this automatically. |
-| `NEO4J_USER` | Neo4j username | Default: `neo4j` |
-| `NEO4J_PASSWORD` | Neo4j password | Set to `bigredmacro` in docker-compose. Use a strong random password for production. |
 | `CORNELL_DINING_API_BASE` | Cornell Dining API base URL | Default: `https://now.dining.cornell.edu/api/1.0` |
 | `CORS_ALLOWED_ORIGINS` | Allowed frontend origins | Default: `http://localhost:5173` |
 
 ### 2. Running with Docker (Recommended)
 
-Docker Compose spins up **5 containers**: MongoDB, Redis, Neo4j, Django Backend, and Celery Worker.
+Docker Compose spins up **4 containers**: MongoDB, Redis, Django Backend, and Celery Worker.
 
 ```bash
 # Set your Google API key so docker-compose can pass it to containers
@@ -85,7 +82,6 @@ If you prefer to run without Docker, you need to install and start these service
 |---|---|---|
 | **MongoDB 7** | `brew install mongodb-community` then `brew services start mongodb-community` | `27017` |
 | **Redis 7** | `brew install redis` then `brew services start redis` | `6379` |
-| **Neo4j 5** | `brew install neo4j` then `neo4j start` | `7687` (bolt) / `7474` (browser) |
 
 Then install Python dependencies and run:
 
@@ -115,8 +111,6 @@ MongoEngine handles schema dynamically — all collections (including `notificat
 | **Frontend Dashboard** | [http://localhost:5173](http://localhost:5173) |
 | **Backend Django API** | [http://localhost:8000/api/](http://localhost:8000/api/) |
 | **MongoDB** | `mongodb://localhost:27017` |
-| **Neo4j Browser** | [http://localhost:7474](http://localhost:7474) |
-| **Neo4j Bolt** | `bolt://localhost:7687` |
 | **Redis** | `redis://localhost:6379` |
 
 ### Viewing Your Databases
@@ -137,13 +131,7 @@ Or from the terminal:
 mongosh mongodb://localhost:27017/bigredmacro
 ```
 
-#### Neo4j (graph data — campus routing)
 
-Open [http://localhost:7474](http://localhost:7474) in your browser — that's the built-in Neo4j Browser UI. Sign in with username `neo4j` and password `bigredmacro`, then run Cypher queries visually:
-
-```cypher
-MATCH (n) RETURN n
-```
 
 #### SQLite (Django auth only — users, tokens, sessions)
 
