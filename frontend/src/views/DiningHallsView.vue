@@ -19,25 +19,38 @@
           <button @click="filterStatus = 'open'" :class="['px-4 py-1.5 rounded-lg text-sm font-medium transition-colors', filterStatus === 'open' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white']">Open Now</button>
           <button @click="filterStatus = 'closed'" :class="['px-4 py-1.5 rounded-lg text-sm font-medium transition-colors', filterStatus === 'closed' ? 'bg-red-500/20 text-red-400' : 'text-slate-400 hover:text-white']">Closed</button>
         </div>
-        
+
         <select v-model="filterArea" class="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 backdrop-blur-xl focus:outline-none focus:border-red-500">
           <option value="all">All Areas</option>
           <option v-for="area in uniqueAreas" :key="area" :value="area">{{ area }}</option>
         </select>
       </div>
 
-      <!-- Dining Halls Grid -->
-      <div v-if="!selectedHall" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <div v-for="hall in filteredHalls" :key="hall.id" 
+      <!-- Dining Halls Grid — skeleton loading state -->
+      <div v-if="!selectedHall && loadingHalls" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div
+          v-for="n in 8"
+          :key="n"
+          class="flex flex-col rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl animate-pulse"
+        >
+          <div class="h-5 w-3/4 rounded-lg bg-white/10 mb-2"></div>
+          <div class="h-3 w-1/2 rounded-md bg-white/5 mb-6"></div>
+          <div class="mt-auto h-6 w-20 rounded-full bg-white/10"></div>
+        </div>
+      </div>
+
+      <!-- Dining Halls Grid — real data -->
+      <div v-else-if="!selectedHall" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div v-for="hall in filteredHalls" :key="hall.id"
              @click="openHall(hall)"
              class="group cursor-pointer flex flex-col rounded-3xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 backdrop-blur-xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg relative overflow-hidden">
-             
+
            <div class="absolute inset-0 bg-gradient-to-br from-red-500/10 to-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-           
+
            <h2 class="text-lg font-bold text-white mb-1 z-10">{{ hall.name }}</h2>
            <p class="text-xs text-slate-400 mb-4 uppercase tracking-wider z-10">{{ hall.campus_area || 'Campus' }}</p>
 
-           <div class="mt-auto z-10 flex items-center gap-2">
+           <div class="mt-auto z-10 flex items-center gap-2 flex-wrap">
              <span v-if="isOpen(hall)" class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-400">
                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                Open Now
@@ -46,12 +59,17 @@
                <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
                Closed
              </span>
+             <!-- Closing Soon badge — shown when open but closing within 30 minutes -->
+             <span v-if="isOpen(hall) && isClosingSoon(hall)" class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-400">
+               <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+               Closing Soon
+             </span>
            </div>
         </div>
       </div>
 
       <!-- Selected Hall View -->
-      <div v-else class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div v-if="selectedHall" class="animate-in fade-in slide-in-from-bottom-4 duration-500">
         <button @click="selectedHall = null" class="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-white transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
           Back to list
@@ -64,9 +82,23 @@
             <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">BRBs: {{ selectedHall.accepts_brbs ? 'Yes' : 'No' }}</span>
           </div>
 
-          <div v-if="loadingMenu" class="py-12 flex justify-center">
-            <div class="h-8 w-8 rounded-full border-4 border-red-500 border-t-transparent animate-spin"></div>
+          <!-- Menu skeleton loading state -->
+          <div v-if="loadingMenu" class="space-y-10">
+            <div v-for="n in 2" :key="n" class="space-y-4 animate-pulse">
+              <div class="h-4 w-32 rounded-md bg-white/10 mb-4"></div>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="m in 6" :key="m" class="rounded-2xl bg-black/20 p-4 border border-white/5">
+                  <div class="h-4 w-3/4 rounded-md bg-white/10 mb-2"></div>
+                  <div class="h-3 w-1/3 rounded-sm bg-white/5 mb-3"></div>
+                  <div class="flex gap-1">
+                    <div class="h-3 w-10 rounded-sm bg-white/5"></div>
+                    <div class="h-3 w-10 rounded-sm bg-white/5"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+
           <div v-else-if="!menus.length" class="text-center py-12 text-slate-400">
             No menus available for today.
           </div>
@@ -74,7 +106,7 @@
             <div v-for="menu in menus" :key="menu.meal_period" class="space-y-4">
               <h3 class="text-lg font-bold text-red-400 uppercase tracking-widest border-b border-white/10 pb-2">{{ menu.meal_period }}</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                
+
                 <div v-for="(item, idx) in menu.items" :key="idx" class="group flex items-start justify-between rounded-2xl bg-black/20 p-4 hover:bg-black/40 transition-colors border border-white/5">
                   <div class="pr-4">
                     <h4 class="text-sm font-bold text-slate-200">{{ item.name }}</h4>
@@ -99,6 +131,23 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast notification -->
+    <transition
+      enter-active-class="transition-all duration-300 ease-out"
+      enter-from-class="opacity-0 translate-y-4"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition-all duration-200 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-4"
+    >
+      <div
+        v-if="toast.visible"
+        class="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-800/90 px-4 py-3 text-sm font-medium text-white shadow-2xl backdrop-blur-xl"
+      >
+        {{ toast.message }}
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -115,6 +164,18 @@ const loadingMenu = ref(false)
 
 const favoriteMeals = ref(new Set())
 
+// Toast state
+const toast = ref({ visible: false, message: '' })
+let toastTimer = null
+
+function showToast(message) {
+  if (toastTimer) clearTimeout(toastTimer)
+  toast.value = { visible: true, message }
+  toastTimer = setTimeout(() => {
+    toast.value.visible = false
+  }, 2000)
+}
+
 // Filters
 const filterStatus = ref('all') // 'all', 'open', 'closed'
 const filterArea = ref('all')
@@ -126,14 +187,10 @@ const uniqueAreas = computed(() => {
 
 const filteredHalls = computed(() => {
   return halls.value.filter(hall => {
-    // Status match
     const open = isOpen(hall)
     if (filterStatus.value === 'open' && !open) return false
     if (filterStatus.value === 'closed' && open) return false
-    
-    // Area match
     if (filterArea.value !== 'all' && hall.campus_area !== filterArea.value) return false
-    
     return true
   })
 })
@@ -155,16 +212,46 @@ onMounted(async () => {
   }
 })
 
+// Parses "HH:MM" into a Date object set to today
+function parseTimeToday(timeStr) {
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  const d = new Date()
+  d.setHours(hours, minutes, 0, 0)
+  return d
+}
+
+// Returns the day name that matches the keys in operating_hours
+function getTodayName() {
+  return new Date().toLocaleDateString('en-US', { weekday: 'long' })
+}
+
 function isOpen(hall) {
-  // A crude demo checker
-  return !!hall.operating_hours && Object.keys(hall.operating_hours).length > 0;
+  if (!hall.operating_hours || typeof hall.operating_hours !== 'object') return false
+  const todayName = getTodayName()
+  const todayHours = hall.operating_hours[todayName]
+  if (!todayHours || !todayHours.open || !todayHours.close) return false
+  const now = new Date()
+  const openTime = parseTimeToday(todayHours.open)
+  const closeTime = parseTimeToday(todayHours.close)
+  return now >= openTime && now < closeTime
+}
+
+function isClosingSoon(hall) {
+  if (!hall.operating_hours || typeof hall.operating_hours !== 'object') return false
+  const todayName = getTodayName()
+  const todayHours = hall.operating_hours[todayName]
+  if (!todayHours || !todayHours.close) return false
+  const now = new Date()
+  const closeTime = parseTimeToday(todayHours.close)
+  const diffMs = closeTime - now
+  return diffMs > 0 && diffMs <= 30 * 60 * 1000
 }
 
 async function openHall(hall) {
   selectedHall.value = hall
   loadingMenu.value = true
   menus.value = []
-  
+
   try {
     const today = new Date().toISOString().split('T')[0]
     const res = await getDiningHallMenu(hall.id, today)
@@ -181,20 +268,22 @@ function isFavorite(name) {
 }
 
 async function toggleFavorite(name) {
-  const isFav = isFavorite(name)
-  if (isFav) {
+  const wasFav = isFavorite(name)
+  if (wasFav) {
     favoriteMeals.value.delete(name)
+    showToast('Removed from favorites')
   } else {
     favoriteMeals.value.add(name)
+    showToast('Added to favorites')
   }
-  
+
   try {
     const res = await toggleFavoriteMeal(name)
     favoriteMeals.value = new Set(res.data.favorite_meals)
   } catch (e) {
     console.error(e)
-    // Revert if failed
-    if (isFav) {
+    // Revert optimistic update on failure
+    if (wasFav) {
       favoriteMeals.value.add(name)
     } else {
       favoriteMeals.value.delete(name)
