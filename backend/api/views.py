@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from django.core.cache import cache
 
 from api.models import DailyMenu, DiningHall, UserProfile, WaitTimeSample
 from api.serializers import (
@@ -16,11 +17,10 @@ from api.serializers import (
 from api.services.dining_api import CornellDiningClient
 from api.services.meal_planner import MealPlannerService
 from api.services.wait_time import WaitTimeService
+from api.services.calendar_api import get_authorization_url, exchange_code, get_free_time_blocks
+from api.RAG.pipeline import generate_rag_meal_plan
 
 
-# ------------------------------------------------------------------
-# Dining Halls
-# ------------------------------------------------------------------
 
 
 @api_view(["GET"])
@@ -53,9 +53,7 @@ def dining_hall_menu(request, hall_id: str):
     return Response(result)
 
 
-# ------------------------------------------------------------------
 # User Profile
-# ------------------------------------------------------------------
 
 
 @api_view(["GET", "PUT"])
@@ -89,10 +87,29 @@ def user_profile(request):
     profile.save()
     return Response(UserProfileSerializer(profile).data)
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def toggle_favorite_meal(request):
+    """Toggle a meal name in the user's favorite_meals list."""
+    profile = UserProfile.objects(django_user_id=request.user.id).first()
+    if not profile:
+        profile = UserProfile(django_user_id=request.user.id)
+        profile.save()
 
-# ------------------------------------------------------------------
-# Meal Plan Generation
-# ------------------------------------------------------------------
+    meal_name = request.data.get("meal_name")
+    if not meal_name:
+        return Response({"detail": "meal_name is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if meal_name in profile.favorite_meals:
+        profile.favorite_meals.remove(meal_name)
+    else:
+        profile.favorite_meals.append(meal_name)
+
+    profile.save()
+    return Response({"favorite_meals": profile.favorite_meals})
+
+
+
 
 
 @api_view(["POST"])
@@ -129,9 +146,7 @@ def meal_plan_history(request):
     return Response(MealPlanSerializer(plans, many=True).data)
 
 
-# ------------------------------------------------------------------
 # Wait Times
-# ------------------------------------------------------------------
 
 
 @api_view(["GET"])
@@ -174,9 +189,7 @@ def record_checkin(request):
     return Response({"status": "recorded", "sample_id": str(sample.id)})
 
 
-# ------------------------------------------------------------------
 # Admin: Menu Refresh
-# ------------------------------------------------------------------
 
 
 @api_view(["POST"])
@@ -195,3 +208,106 @@ def refresh_menus(request):
     client = CornellDiningClient()
     count = client.ingest_all_menus(target_date)
     return Response({"ingested_periods": count, "date": target_date_str})
+
+# ------------------------------------------------------------------
+# AI / Calendar / RAG
+# ------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def calendar_connect(request):
+    redirect_uri = "http://localhost:5173/calendar-callback"
+    url, state, code_verifier = get_authorization_url(redirect_uri)
+    if url:
+        if code_verifier and state:
+            cache.set(f"pkce_{state}", code_verifier, timeout=600)
+        return Response({"auth_url": url}, status=status.HTTP_200_OK)
+    return Response({"error": "Failed to generate auth url"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def calendar_callback(request):
+    code = request.GET.get('code') or request.data.get('code')
+    state = request.GET.get('state') or request.data.get('state')
+    if not code:
+        return Response({"error": "No code provided"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    code_verifier = cache.get(f"pkce_{state}") if state else None
+    
+    redirect_uri = "http://localhost:5173/calendar-callback"
+    token_dict = exchange_code(code, redirect_uri, code_verifier)
+    if not token_dict:
+        return Response({"error": "Failed to exchange token"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response({
+        "message": "Successfully exchanged code. Use this token dictionary for AI generation.",
+        "token_dict": token_dict
+    }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_ai_meal_plan(request):
+    target_date = request.data.get("date", date.today().isoformat())
+    token_dict = request.data.get("google_auth_token", {})
+    
+    profile = UserProfile.objects(django_user_id=request.user.id).first()
+    if not profile:
+        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+    if token_dict and profile:
+        profile.google_auth_token = token_dict
+        profile.save()
+    elif not token_dict and profile.google_auth_token:
+        token_dict = profile.google_auth_token
+        
+    gaps = get_free_time_blocks(token_dict, None)
+    
+    result = generate_rag_meal_plan(profile, gaps, target_date)
+    return Response({"ai_plan": result}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def log_meal_from_image(request):
+    """
+    Accepts a base64 encoded image, identifies the food via Vision API,
+    and returns the best match from today's menu.
+    """
+    from api.services.vision_service import identify_food_from_image
+    from api.models import DailyMenu
+    from datetime import date
+
+    b64_image = request.data.get("image")
+    if not b64_image:
+        return Response({"detail": "No image provided."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    description = identify_food_from_image(b64_image)
+    if "Error" in description or "Unknown" in description:
+        return Response({"detail": description}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    today = date.today().isoformat()
+    menus = DailyMenu.objects(date=today)
+    
+    best_match = None
+    best_score = 0
+    desc_words = set(description.lower().replace(",", "").replace(".", "").split())
+    
+    for menu in menus:
+        for item in menu.items:
+            item_words = set(item.name.lower().replace(",", "").replace(".", "").split())
+            score = len(desc_words.intersection(item_words))
+            if score > best_score:
+                best_score = score
+                best_match = item
+                
+    if best_match:
+        from api.serializers import MenuItemSerializer
+        return Response({
+            "identified_as": description,
+            "matched_item": MenuItemSerializer(best_match).data
+        })
+    
+    return Response({
+        "identified_as": description,
+        "detail": "Could not find a matching item on today's menu."
+    })

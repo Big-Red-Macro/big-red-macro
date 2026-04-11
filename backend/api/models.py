@@ -64,7 +64,7 @@ class DailyMenu(Document):
     meta = {
         "collection": "daily_menus",
         "indexes": [
-            {"fields": ["dining_hall", "date"], "unique": True},
+            {"fields": ["dining_hall", "date", "meal_period"], "unique": True},
             "date",
         ],
     }
@@ -115,6 +115,8 @@ class UserProfile(Document):
         choices=["traditional", "west_campus", "bear_necessities", "none"],
         default="traditional",
     )
+    google_auth_token = DictField()
+    favorite_meals = ListField(StringField())
     updated_at = DateTimeField(default=datetime.utcnow)
 
 
@@ -135,3 +137,12 @@ class MealPlan(Document):
     goal_macros = EmbeddedDocumentField(Macros)
     generated_at = DateTimeField(default=datetime.utcnow)
     is_active = BooleanField(default=True)
+
+class Notification(Document):
+    """Stores user notifications (e.g., favorite food alerts)."""
+    meta = {"collection": "notifications", "indexes": ["django_user_id", "created_at"]}
+    
+    django_user_id = IntField(required=True)
+    message = StringField(required=True)
+    created_at = DateTimeField(default=datetime.utcnow)
+    is_read = BooleanField(default=False)
