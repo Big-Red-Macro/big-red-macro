@@ -19,4 +19,6 @@ google-auth-oauthlib
 langchain
 langchain-openai
 pydantic
+langchain-core
 langchain-google-genai
+neo4j
