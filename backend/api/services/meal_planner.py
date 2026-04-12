@@ -67,7 +67,7 @@ def _greedy_select(
     candidates: list,
     period_goal: dict,
     max_items: int = 5,
-    user_history: dict | None = None,
+    user_history: Optional[dict] = None,
 ) -> list:
     """Greedily pick items from a list to approach the period macro goal."""
     scored = sorted(

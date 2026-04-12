@@ -23,6 +23,7 @@ Total score is in [0, 1] with higher = better fit.
 """
 
 import logging
+from typing import Optional
 
 import numpy as np
 
@@ -46,7 +47,7 @@ _HISTORY_LOOKBACK = 14
 # Macro ratio helpers
 # ---------------------------------------------------------------------------
 
-def _item_macro_vector(item) -> np.ndarray | None:
+def _item_macro_vector(item) -> Optional[np.ndarray]:
     """
     Return a 3-vector [protein_kcal_frac, carbs_kcal_frac, fat_kcal_frac]
     normalised to sum to 1, or None if macros are missing/zero.
@@ -84,9 +85,6 @@ def _cosine(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.dot(a, b) / denom)
 
 
-# ---------------------------------------------------------------------------
-# History preference builder
-# ---------------------------------------------------------------------------
 
 def build_user_history(django_user_id: int) -> dict:
     """
@@ -132,11 +130,7 @@ def build_user_history(django_user_id: int) -> dict:
         return {"station_prefs": {}, "category_prefs": {}}
 
 
-# ---------------------------------------------------------------------------
-# Scoring
-# ---------------------------------------------------------------------------
-
-def score_item(item, period_goal: dict, user_history: dict | None = None) -> float:
+def score_item(item, period_goal: dict, user_history: Optional[dict] = None) -> float:
     """
     Compute a personalised score for *item* given the period macro goal.
 
@@ -153,7 +147,6 @@ def score_item(item, period_goal: dict, user_history: dict | None = None) -> flo
     if not item.macros or item.macros.calories <= 0:
         return 0.0
 
-    # --- Component 1: macro cosine similarity ---
     item_vec = _item_macro_vector(item)
     if item_vec is None:
         cosine_score = 0.0
@@ -161,15 +154,12 @@ def score_item(item, period_goal: dict, user_history: dict | None = None) -> flo
         goal_vec = _goal_macro_vector(period_goal)
         cosine_score = _cosine(item_vec, goal_vec)
 
-    # --- Component 2: calorie fit ---
-    # Expected per-item calories assuming ~3 items per meal
     expected_cal = (period_goal.get("calories") or 600) / 3.0
     item_cal = item.macros.calories
-    # Smooth decay: score = 1 at perfect match, ~0.5 at 2× or 0× distance
+    # Smooth decay: score = 1 at perfect match
     ratio = abs(item_cal - expected_cal) / max(expected_cal, 1.0)
     calorie_fit = 1.0 / (1.0 + ratio)
 
-    # --- Component 3: history preference boost ---
     history_score = 0.0
     if user_history:
         station_prefs = user_history.get("station_prefs", {})

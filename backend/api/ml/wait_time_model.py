@@ -19,6 +19,7 @@ Target: estimated_wait_minutes (int)
 
 import logging
 import os
+from typing import Optional
 
 import joblib
 import numpy as np
@@ -39,10 +40,7 @@ DINING_TYPE_CODE = {"residential": 0, "cafe": 1, "retail": 2}
 CAMPUS_AREA_CODE = {"Central": 0, "North": 1, "West": 2, "East": 3}
 
 
-# ---------------------------------------------------------------------------
-# Feature engineering
-# ---------------------------------------------------------------------------
-
+############
 def _row(sample) -> list:
     """Convert one WaitTimeSample document into a feature row."""
     dining_type = getattr(sample.dining_hall, "dining_type", "residential") or "residential"
@@ -64,9 +62,6 @@ def _build_dataset(samples):
     return np.array(X, dtype=float), np.array(y, dtype=float)
 
 
-# ---------------------------------------------------------------------------
-# Training
-# ---------------------------------------------------------------------------
 
 def train(samples=None) -> bool:
     """
@@ -116,9 +111,6 @@ def train(samples=None) -> bool:
     return True
 
 
-# ---------------------------------------------------------------------------
-# Inference
-# ---------------------------------------------------------------------------
 
 # Module-level cache so the model is loaded at most once per process.
 _cached_pipeline = None
@@ -145,7 +137,7 @@ def invalidate_cache():
     _cached_pipeline = None
 
 
-def predict(dining_hall, day_of_week: int, hour: int, minute: int, occupancy_pct: float = 0.5) -> int | None:
+def predict(dining_hall, day_of_week: int, hour: int, minute: int, occupancy_pct: float = 0.5) -> Optional[int]:
     """
     Return a predicted wait time in minutes, or None if the model is unavailable.
 

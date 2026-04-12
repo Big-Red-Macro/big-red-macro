@@ -69,10 +69,6 @@ _GET_KEYWORDS   = {"mobile payment", "apple pay", "google"}
 class CornellDiningClient:
     BASE_URL = settings.CORNELL_DINING_API_BASE  # https://admin-now.dining.cornell.edu/api/1.0
 
-    # ------------------------------------------------------------------
-    # HTTP helpers
-    # ------------------------------------------------------------------
-
     def _get(self, path: str, params: dict = None) -> dict:
         url = f"{self.BASE_URL}/{path}"
         try:
@@ -83,9 +79,6 @@ class CornellDiningClient:
             logger.error("Cornell Dining API request failed [%s]: %s", url, exc)
             return {}
 
-    # ------------------------------------------------------------------
-    # Public fetch
-    # ------------------------------------------------------------------
 
     def get_eateries(self) -> list[dict]:
         """
@@ -101,12 +94,9 @@ class CornellDiningClient:
         data = self._get("dining/announcements.json")
         return data.get("data", {}).get("announcements", [])
 
-    # ------------------------------------------------------------------
-    # Parsing helpers
-    # ------------------------------------------------------------------
 
     @staticmethod
-    def _normalise_period(raw: str) -> str | None:
+    def _normalise_period(raw: str) -> Optional[str]:
         """
         Map a Cornell API event descr to a canonical meal period.
 
@@ -235,9 +225,6 @@ class CornellDiningClient:
             items.append(self._parse_menu_item(raw, station))
         return items
 
-    # ------------------------------------------------------------------
-    # Ingestion
-    # ------------------------------------------------------------------
 
     def ingest_all_menus(self, target_date: Optional[date] = None) -> int:
         """
@@ -262,7 +249,6 @@ class CornellDiningClient:
             hall = self._upsert_dining_hall(eatery)
             upserted_periods: set[str] = set()
 
-            # -- Pass 1: event-level menus (dining rooms + some cafes) --
             for oh in eatery.get("operatingHours", []):
                 if oh.get("date") != date_str:
                     continue
@@ -294,7 +280,6 @@ class CornellDiningClient:
                         upserted_periods.add(p)
                         count += 1
 
-            # -- Pass 2: diningItems fallback for cafes with no event menus --
             # Only runs when the event loop produced no menu items for this eatery.
             if not upserted_periods and eatery.get("diningItems"):
                 items = self._items_from_dining_items(eatery)

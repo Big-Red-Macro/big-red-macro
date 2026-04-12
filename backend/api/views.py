@@ -209,9 +209,7 @@ def refresh_menus(request):
     count = client.ingest_all_menus(target_date)
     return Response({"ingested_periods": count, "date": target_date_str})
 
-# ------------------------------------------------------------------
-# AI / Calendar / RAG
-# ------------------------------------------------------------------
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
