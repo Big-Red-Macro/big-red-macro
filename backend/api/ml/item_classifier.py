@@ -43,10 +43,6 @@ MODEL_PATH = os.path.join(MODEL_DIR, "item_classifier.joblib")
 
 MIN_TRAINING_ITEMS = 50
 
-# ---------------------------------------------------------------------------
-# Keyword lists — used for pseudo-labelling
-# ---------------------------------------------------------------------------
-
 _KEYWORDS: dict[str, list[str]] = {
     "protein": [
         "chicken", "beef", "steak", "pork", "ham", "bacon", "turkey",
@@ -162,9 +158,7 @@ def pseudo_label(text: str) -> str:
     return top[0]
 
 
-# ---------------------------------------------------------------------------
 # Training
-# ---------------------------------------------------------------------------
 
 def train(menus=None) -> bool:
     """
@@ -231,9 +225,7 @@ def train(menus=None) -> bool:
     return True
 
 
-# ---------------------------------------------------------------------------
 # Inference
-# ---------------------------------------------------------------------------
 
 _cached_pipeline = None
 
