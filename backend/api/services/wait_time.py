@@ -11,6 +11,7 @@ Prediction priority:
 
 from datetime import datetime
 import logging
+from typing import Optional
 
 from api.models import DiningHall, WaitTimeSample
 from api.ml import wait_time_model
@@ -57,7 +58,7 @@ class WaitTimeService:
 
     def _historical_average(
         self, dining_hall: DiningHall, day_of_week: int, hour: int
-    ) -> int | None:
+    ) -> Optional[int]:
         """Mean of the last 20 same-slot samples for this hall."""
         samples = WaitTimeSample.objects(
             dining_hall=dining_hall,

@@ -12,6 +12,9 @@ export default api
 export const login = (username, password) =>
   api.post('/auth/login/', { username, password })
 
+export const loginGoogle = (credential) =>
+  api.post('/auth/google/', { credential })
+
 export const refreshToken = (refresh) =>
   api.post('/auth/refresh/', { refresh })
 

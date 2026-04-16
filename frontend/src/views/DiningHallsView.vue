@@ -1,119 +1,88 @@
 <template>
-  <div class="p-6 md:p-8 max-w-6xl mx-auto">
+  <div class="p-4 md:p-8">
+    <div class="mx-auto max-w-6xl">
+      <header class="mb-8 flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-white mb-2">Today on Campus</h1>
+          <p class="text-slate-400">Discover what's open and save your favorite meals.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span v-if="userLocation" class="hidden md:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-400">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" /></svg>
+            Sorted by distance
+          </span>
+          <div v-if="loadingHalls" class="text-cornell-red text-sm animate-pulse flex items-center gap-2">
+            <div class="h-4 w-4 rounded-full border-2 border-cornell-red border-t-transparent animate-spin"></div>
+            Syncing Menus...
+          </div>
+        </div>
+      </header>
 
-    <header class="mb-8 flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Today on Campus</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Discover what's open and save your favorite meals.</p>
-      </div>
-      <div v-if="loadingHalls" class="flex items-center gap-2 text-xs text-slate-400">
-        <div class="h-3.5 w-3.5 rounded-full border-2 border-red-500 border-t-transparent animate-spin"></div>
-        Syncing...
-      </div>
-    </header>
-
-    <!-- Filter Bar -->
-    <div v-if="!selectedHall" class="mb-6 flex flex-wrap items-center gap-3">
-      <div class="flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1">
-        <button
-          @click="filterStatus = 'all'"
-          :class="['px-3 py-1.5 rounded-lg text-sm font-medium transition-colors', filterStatus === 'all' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']"
-        >All</button>
-        <button
-          @click="filterStatus = 'open'"
-          :class="['px-3 py-1.5 rounded-lg text-sm font-medium transition-colors', filterStatus === 'open' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']"
-        >Open Now</button>
-        <button
-          @click="filterStatus = 'closed'"
-          :class="['px-3 py-1.5 rounded-lg text-sm font-medium transition-colors', filterStatus === 'closed' ? 'bg-red-500/20 text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']"
-        >Closed</button>
+      <!-- Filter Bar -->
+      <div v-if="!selectedHall" class="mb-6 flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-1 backdrop-blur-xl">
+          <button @click="filterStatus = 'all'" :class="['px-4 py-1.5 rounded-lg text-sm font-medium transition-colors', filterStatus === 'all' ? 'bg-cornell-red/20 text-cornell-300' : 'text-slate-400 hover:text-white']">All</button>
+          <button @click="filterStatus = 'open'" :class="['px-4 py-1.5 rounded-lg text-sm font-medium transition-colors', filterStatus === 'open' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white']">Open Now</button>
+          <button @click="filterStatus = 'closed'" :class="['px-4 py-1.5 rounded-lg text-sm font-medium transition-colors', filterStatus === 'closed' ? 'bg-red-500/20 text-red-400' : 'text-slate-400 hover:text-white']">Closed</button>
+        </div>
+        
+        <select v-model="filterArea" class="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 backdrop-blur-xl focus:outline-none focus:border-cornell-red">
+          <option value="all">All Areas</option>
+          <option v-for="area in uniqueAreas" :key="area" :value="area">{{ area }}</option>
+        </select>
       </div>
 
-      <select
-        v-model="filterArea"
-        class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:border-red-500 transition-colors"
-      >
-        <option value="all">All Areas</option>
-        <option value="North">North Campus</option>
-        <option value="Central">Central Campus</option>
-        <option value="West">West Campus</option>
-      </select>
+      <!-- Dining Halls Grid -->
+      <div v-if="!selectedHall" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div v-for="hall in filteredHalls" :key="hall.id" 
+             @click="openHall(hall)"
+             class="group cursor-pointer flex flex-col rounded-3xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 backdrop-blur-xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg relative overflow-hidden">
+             
+           <div class="absolute inset-0 bg-gradient-to-br from-cornell-red/10 to-cornell-red/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+           
+           <h2 class="text-lg font-bold text-white mb-1 z-10">{{ hall.name }}</h2>
+           <p class="text-xs text-slate-400 mb-3 uppercase tracking-wider z-10">{{ hall.campus_area || 'Campus' }}</p>
+           
+           <!-- Distance badge -->
+           <p v-if="hall._distance != null" class="text-xs text-cornell-300 mb-3 z-10 flex items-center gap-1">
+             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+             {{ hall._distance }} mi away
+           </p>
+
+           <div class="mt-auto z-10 flex items-center gap-2">
+             <span v-if="isOpen(hall)" class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-400">
+               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+               Open Now
+             </span>
+             <span v-else class="inline-flex items-center gap-1.5 rounded-full bg-red-500/20 px-2.5 py-1 text-xs font-bold text-red-400">
+               <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+               Closed
+             </span>
+           </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Skeleton -->
-    <div v-if="!selectedHall && loadingHalls" class="space-y-8">
-      <div v-for="n in 3" :key="n">
-        <div class="h-4 w-32 rounded bg-slate-200 dark:bg-slate-700 mb-4 animate-pulse"></div>
-        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <div
-            v-for="m in 4" :key="m"
-            class="flex flex-col rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 animate-pulse"
-          >
-            <div class="h-4 w-3/4 rounded bg-slate-200 dark:bg-slate-700 mb-2"></div>
-            <div class="h-3 w-1/2 rounded bg-slate-100 dark:bg-slate-700/60 mb-6"></div>
-            <div class="mt-auto h-5 w-20 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+      <!-- Selected Hall View -->
+      <div v-else class="animate-fade-in">
+        <button @click="selectedHall = null" class="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          Back to list
+        </button>
+
+        <div class="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
+          <h2 class="text-3xl font-bold text-white mb-2">{{ selectedHall.name }}</h2>
+          <div class="flex flex-wrap gap-2 mb-8">
+            <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">Swipes: {{ selectedHall.accepts_meal_swipe ? 'Yes' : 'No' }}</span>
+            <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">BRBs: {{ selectedHall.accepts_brbs ? 'Yes' : 'No' }}</span>
+            <span v-if="selectedHall._distance != null" class="rounded-full bg-cornell-red/20 px-3 py-1 text-xs font-bold text-cornell-300">{{ selectedHall._distance }} mi away</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Halls: grouped by region when "All Areas" selected -->
-    <div v-else-if="!selectedHall && filterArea === 'all'" class="space-y-10">
-      <div v-for="region in regions" :key="region.key">
-        <div v-if="hallsByRegion(region.key).length > 0">
-          <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4 flex items-center gap-2">
-            <span class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></span>
-            {{ region.label }}
-            <span class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></span>
-          </h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <HallCard
-              v-for="hall in hallsByRegion(region.key)"
-              :key="hall.id"
-              :hall="hall"
-              :is-open="isOpen(hall)"
-              :is-closing-soon="isClosingSoon(hall)"
-              @click="openHall(hall)"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Halls: flat list when specific area selected -->
-    <div v-else-if="!selectedHall" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      <HallCard
-        v-for="hall in filteredHalls"
-        :key="hall.id"
-        :hall="hall"
-        :is-open="isOpen(hall)"
-        :is-closing-soon="isClosingSoon(hall)"
-        @click="openHall(hall)"
-      />
-      <div v-if="filteredHalls.length === 0" class="col-span-full py-12 text-center text-slate-400 dark:text-slate-500 text-sm">
-        No dining halls found for this area.
-      </div>
-    </div>
-
-    <!-- Selected Hall -->
-    <div v-if="selectedHall">
-      <button @click="selectedHall = null" class="mb-6 flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-        </svg>
-        Back
-      </button>
-
-      <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
-        <div class="mb-6">
-          <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-3">{{ selectedHall.name }}</h2>
-          <div class="flex flex-wrap gap-2">
-            <span class="rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-              Swipes: {{ selectedHall.accepts_meal_swipe ? 'Yes' : 'No' }}
-            </span>
-            <span class="rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-              BRBs: {{ selectedHall.accepts_brbs ? 'Yes' : 'No' }}
-            </span>
+          <div v-if="loadingMenu" class="py-12 flex justify-center">
+            <div class="h-8 w-8 rounded-full border-4 border-cornell-red border-t-transparent animate-spin"></div>
           </div>
         </div>
 
@@ -132,32 +101,27 @@
               </div>
             </div>
           </div>
-        </div>
-
-        <div v-else-if="!menus.length" class="py-10 text-center text-slate-400 dark:text-slate-500 text-sm">
-          No menus available for today.
-        </div>
-
-        <div v-else class="space-y-8">
-          <div v-for="menu in menus" :key="menu.meal_period">
-            <h3 class="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">
-              {{ menu.meal_period }}
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div
-                v-for="(item, idx) in menu.items"
-                :key="idx"
-                class="flex items-start justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 hover:bg-slate-100 dark:hover:bg-slate-700/60 p-4 transition-colors"
-              >
-                <div class="pr-3 min-w-0">
-                  <h4 class="text-sm font-medium text-slate-900 dark:text-white truncate">{{ item.name }}</h4>
-                  <p v-if="item.station" class="text-[10px] text-slate-400 dark:text-slate-500 uppercase mt-0.5">{{ item.station }}</p>
-                  <div class="flex gap-1 mt-2 flex-wrap">
-                    <span v-if="item.is_vegan" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase">Vegan</span>
-                    <span v-if="item.is_vegetarian && !item.is_vegan" class="px-1.5 py-0.5 rounded bg-lime-500/20 text-[9px] text-lime-600 dark:text-lime-400 font-semibold uppercase">Veg</span>
-                    <span v-if="item.is_halal" class="px-1.5 py-0.5 rounded bg-blue-500/20 text-[9px] text-blue-600 dark:text-blue-400 font-semibold uppercase">Halal</span>
-                    <span v-for="alg in item.allergens?.slice(0, 2)" :key="alg" class="px-1.5 py-0.5 rounded bg-red-500/20 text-[9px] text-red-600 dark:text-red-400 font-semibold uppercase">{{ alg }}</span>
+          <div v-else class="space-y-10">
+            <div v-for="menu in menus" :key="menu.meal_period" class="space-y-4">
+              <h3 class="text-lg font-bold text-cornell-400 uppercase tracking-widest border-b border-white/10 pb-2">{{ menu.meal_period }}</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                
+                <div v-for="(item, idx) in menu.items" :key="idx" class="group flex items-start justify-between rounded-2xl bg-black/20 p-4 hover:bg-black/40 transition-colors border border-white/5">
+                  <div class="pr-4">
+                    <h4 class="text-sm font-bold text-slate-200">{{ item.name }}</h4>
+                    <p v-if="item.station" class="text-[10px] text-slate-500 uppercase mt-1">{{ item.station }}</p>
+                    <div class="flex gap-1 mt-2 flex-wrap">
+                      <span v-if="item.is_vegan" class="px-1.5 py-0.5 rounded-sm bg-emerald-500/20 text-[9px] text-emerald-400 font-bold uppercase tracking-wider">Vegan</span>
+                      <span v-if="item.is_vegetarian && !item.is_vegan" class="px-1.5 py-0.5 rounded-sm bg-lime-500/20 text-[9px] text-lime-400 font-bold uppercase tracking-wider">Veg</span>
+                      <span v-if="item.is_halal" class="px-1.5 py-0.5 rounded-sm bg-blue-500/20 text-[9px] text-blue-400 font-bold uppercase tracking-wider">Halal</span>
+                      <span v-for="algo in item.allergens.slice(0, 2)" :key="algo" class="px-1.5 py-0.5 rounded-sm bg-red-500/20 text-[9px] text-red-400 font-bold uppercase tracking-wider">{{ algo }}</span>
+                    </div>
                   </div>
+                  <button @click="toggleFavorite(item.name)" class="shrink-0 p-2 rounded-full transition-all focus:outline-none" :class="isFavorite(item.name) ? 'text-cornell-red hover:text-cornell-400 bg-cornell-red/10' : 'text-slate-600 hover:text-cornell-400 bg-white/5'">
+                    <svg class="h-5 w-5" :fill="isFavorite(item.name) ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </button>
                 </div>
                 <button
                   @click.stop="toggleFavorite(item.name)"
@@ -235,7 +199,10 @@ const favoriteMeals = ref(new Set())
 const toast = ref({ visible: false, message: '' })
 let toastTimer = null
 
-const filterStatus = ref('all')
+const userLocation = ref(null)
+
+// Filters
+const filterStatus = ref('all') // 'all', 'open', 'closed'
 const filterArea = ref('all')
 
 const regions = [
@@ -244,36 +211,73 @@ const regions = [
   { key: 'West', label: 'West Campus' },
 ]
 
-function hallsByRegion(regionKey) {
-  return halls.value.filter(hall => {
-    const area = (hall.campus_area || '').toLowerCase()
-    const key = regionKey.toLowerCase()
-    if (!area.includes(key)) return false
-    const open = isOpen(hall)
-    if (filterStatus.value === 'open' && !open) return false
-    if (filterStatus.value === 'closed' && open) return false
-    return true
+// Haversine distance (miles)
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 3958.8 // Earth radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function attachDistances() {
+  if (!userLocation.value) return
+  const { lat, lng } = userLocation.value
+  halls.value.forEach(h => {
+    if (h.location_lat && h.location_lng) {
+      h._distance = haversine(lat, lng, h.location_lat, h.location_lng).toFixed(2)
+    } else {
+      h._distance = null
+    }
   })
 }
 
-const filteredHalls = computed(() =>
-  halls.value.filter(hall => {
+const filteredHalls = computed(() => {
+  let result = halls.value.filter(hall => {
     const open = isOpen(hall)
     if (filterStatus.value === 'open' && !open) return false
     if (filterStatus.value === 'closed' && open) return false
-    const area = (hall.campus_area || '').toLowerCase()
-    const selected = filterArea.value.toLowerCase()
-    if (filterArea.value !== 'all' && !area.includes(selected)) return false
+    if (filterArea.value !== 'all' && hall.campus_area !== filterArea.value) return false
     return true
   })
-)
+  
+  // Sort by distance if location is available
+  if (userLocation.value) {
+    result = result.slice().sort((a, b) => {
+      const da = a._distance != null ? parseFloat(a._distance) : Infinity
+      const db = b._distance != null ? parseFloat(b._distance) : Infinity
+      return da - db
+    })
+  }
+  
+  return result
+})
 
 onMounted(async () => {
+  // Request geolocation in parallel with data fetching
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        userLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+        attachDistances()
+      },
+      () => {
+        // Permission denied — silently fall back to default order
+        console.log('Geolocation denied, using default sort order.')
+      },
+      { enableHighAccuracy: false, timeout: 8000 }
+    )
+  }
+
   loadingHalls.value = true
   try {
     const [hallsRes, profileRes] = await Promise.all([getDiningHalls(), getProfile()])
     halls.value = hallsRes.data
-    favoriteMeals.value = new Set(profileRes.data.favorite_meals || [])
+    attachDistances()
+    const favs = profileRes.data.favorite_meals || []
+    favoriteMeals.value = new Set(favs)
   } catch (e) {
     console.error(e)
   } finally {
@@ -293,19 +297,7 @@ function getTodayName() {
 }
 
 function isOpen(hall) {
-  if (!hall.operating_hours || typeof hall.operating_hours !== 'object') return false
-  const todayHours = hall.operating_hours[getTodayName()]
-  if (!todayHours?.open || !todayHours?.close) return false
-  const now = new Date()
-  return now >= parseTimeToday(todayHours.open) && now < parseTimeToday(todayHours.close)
-}
-
-function isClosingSoon(hall) {
-  if (!hall.operating_hours || typeof hall.operating_hours !== 'object') return false
-  const todayHours = hall.operating_hours[getTodayName()]
-  if (!todayHours?.close) return false
-  const diffMs = parseTimeToday(todayHours.close) - new Date()
-  return diffMs > 0 && diffMs <= 30 * 60 * 1000
+  return !!hall.operating_hours && Object.keys(hall.operating_hours).length > 0;
 }
 
 async function openHall(hall) {
@@ -340,7 +332,11 @@ async function toggleFavorite(name) {
     favoriteMeals.value = new Set(res.data.favorite_meals)
   } catch (e) {
     console.error(e)
-    wasFav ? favoriteMeals.value.add(name) : favoriteMeals.value.delete(name)
+    if (isFav) {
+      favoriteMeals.value.add(name)
+    } else {
+      favoriteMeals.value.delete(name)
+    }
   }
 }
 </script>

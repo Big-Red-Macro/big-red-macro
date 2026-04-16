@@ -209,9 +209,7 @@ def refresh_menus(request):
     count = client.ingest_all_menus(target_date)
     return Response({"ingested_periods": count, "date": target_date_str})
 
-# ------------------------------------------------------------------
-# AI / Calendar / RAG
-# ------------------------------------------------------------------
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -247,7 +245,7 @@ def calendar_callback(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_ai_meal_plan(request):
-    target_date = request.data.get("date", date.today().isoformat())
+    target_date_str = request.data.get("date", date.today().isoformat())
     token_dict = request.data.get("google_auth_token", {})
     
     profile = UserProfile.objects(django_user_id=request.user.id).first()
@@ -259,10 +257,15 @@ def generate_ai_meal_plan(request):
         profile.save()
     elif not token_dict and profile.google_auth_token:
         token_dict = profile.google_auth_token
+
+    try:
+        target_date = date.fromisoformat(target_date_str)
+    except ValueError:
+        target_date = date.today()
         
-    gaps = get_free_time_blocks(token_dict, None)
+    gaps = get_free_time_blocks(token_dict, target_date)
     
-    result = generate_rag_meal_plan(profile, gaps, target_date)
+    result = generate_rag_meal_plan(profile, gaps, target_date_str)
     return Response({"ai_plan": result}, status=status.HTTP_200_OK)
 
 
