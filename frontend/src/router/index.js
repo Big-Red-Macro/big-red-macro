@@ -5,6 +5,7 @@ import ConnectView from '../views/ConnectView.vue'
 import CallbackView from '../views/CallbackView.vue'
 import Login from '../views/Login.vue'
 import OnboardingView from '../views/OnboardingView.vue'
+import Profile from '../views/Profile.vue'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile } from '@/api'
 
@@ -43,6 +44,11 @@ const router = createRouter({
       name: 'calendar-callback',
       component: CallbackView,
       meta: { hideNav: true }
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: Profile
     }
   ]
 })

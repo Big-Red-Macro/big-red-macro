@@ -77,6 +77,31 @@
         </div>
       </div>
 
+      <!-- Google Calendar Sync -->
+      <div class="card">
+        <h2 class="font-semibold mb-3 border-b border-gray-700 pb-2">Integrations</h2>
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-medium">Google Calendar AI Sync</h3>
+            <p class="text-sm text-slate-400 max-w-sm">Allow Big Red Macro to read your schedule and automatically plan meals during your free-time blocks.</p>
+          </div>
+          <div>
+            <button 
+              type="button"
+              v-if="!form.has_calendar_connected"
+              @click="connectCalendar"
+              class="rounded-xl border border-red-500 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-500/20"
+            >
+              Connect Calendar
+            </button>
+            <span v-else class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-sm font-medium border border-emerald-500/20">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              Connected
+            </span>
+          </div>
+        </div>
+      </div>
+
       <p v-if="successMsg" class="text-green-600 text-sm">{{ successMsg }}</p>
       <p v-if="errorMsg" class="text-red-600 text-sm">{{ errorMsg }}</p>
 
@@ -91,11 +116,16 @@
 import { ref, onMounted } from 'vue'
 import { getProfile, updateProfile } from '@/api'
 
+import { useMainStore } from '@/stores/mainStore'
+
+const mainStore = useMainStore()
+
 const form = ref({
   macro_goals: { calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65 },
   meal_plan_type: 'traditional',
   dietary_restrictions: [],
   allergens: [],
+  has_calendar_connected: false,
 })
 
 const saving = ref(false)
@@ -133,6 +163,15 @@ async function save() {
   }
 }
 
+async function connectCalendar() {
+  const url = await mainStore.getConnectUrl()
+  if (url) {
+    window.location.href = url
+  } else {
+    errorMsg.value = mainStore.currentError || 'An error occurred fetching the URL.'
+  }
+}
+
 onMounted(async () => {
   try {
     const { data } = await getProfile()
@@ -141,6 +180,7 @@ onMounted(async () => {
       meal_plan_type: data.meal_plan_type || 'traditional',
       dietary_restrictions: data.dietary_restrictions || [],
       allergens: data.allergens || [],
+      has_calendar_connected: data.has_calendar_connected || false,
     }
   } catch {
     // Profile not yet created — use defaults

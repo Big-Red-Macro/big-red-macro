@@ -223,7 +223,7 @@ def calendar_connect(request):
     return Response({"error": "Failed to generate auth url"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET', 'POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def calendar_callback(request):
     code = request.GET.get('code') or request.data.get('code')
     state = request.GET.get('state') or request.data.get('state')
@@ -237,8 +237,13 @@ def calendar_callback(request):
     if not token_dict:
         return Response({"error": "Failed to exchange token"}, status=status.HTTP_400_BAD_REQUEST)
     
+    profile = UserProfile.objects(django_user_id=request.user.id).first()
+    if profile:
+        profile.google_auth_token = token_dict
+        profile.save()
+    
     return Response({
-        "message": "Successfully exchanged code. Use this token dictionary for AI generation.",
+        "message": "Successfully exchanged code and saved to user profile.",
         "token_dict": token_dict
     }, status=status.HTTP_200_OK)
 

@@ -41,6 +41,8 @@ def get_authorization_url(redirect_uri: str):
         return None, None, None
 
 def exchange_code(code: str, redirect_uri: str, code_verifier: str = None) -> dict:
+    # Google auto-adds openid/profile scopes. We must relax oauthlib strict matching.
+    os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
     try:
         flow = Flow.from_client_config(
             get_client_config(),
