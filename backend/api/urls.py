@@ -20,4 +20,6 @@ urlpatterns = [
     path("calendar/connect/", views.calendar_connect, name="calendar-connect"),
     path("calendar/callback/", views.calendar_callback, name="calendar-callback"),
     path("meal-plan/generate-ai/", views.generate_ai_meal_plan, name="generate-ai"),
+    # Vision API
+    path("vision/log-meal/", views.log_meal_from_image, name="log-meal-from-image"),
 ]

@@ -273,3 +273,49 @@ def generate_ai_meal_plan(request):
     result = generate_rag_meal_plan(profile, gaps, target_date_str)
     return Response({"ai_plan": result}, status=status.HTTP_200_OK)
 
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def log_meal_from_image(request):
+    """
+    Accepts a base64 encoded image, identifies the food via Vision API,
+    and returns the best match from today's menu.
+    """
+    from api.services.vision_service import identify_food_from_image
+    from api.models import DailyMenu
+    from datetime import date
+
+    b64_image = request.data.get("image")
+    if not b64_image:
+        return Response({"detail": "No image provided."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    description = identify_food_from_image(b64_image)
+    if "Error" in description or "Unknown" in description:
+        return Response({"detail": description}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    today = date.today().isoformat()
+    menus = DailyMenu.objects(date=today)
+    
+    best_match = None
+    best_score = 0
+    desc_words = set(description.lower().replace(",", "").replace(".", "").split())
+    
+    for menu in menus:
+        for item in menu.items:
+            item_words = set(item.name.lower().replace(",", "").replace(".", "").split())
+            score = len(desc_words.intersection(item_words))
+            if score > best_score:
+                best_score = score
+                best_match = item
+                
+    if best_match:
+        from api.serializers import MenuItemSerializer
+        return Response({
+            "identified_as": description,
+            "matched_item": MenuItemSerializer(best_match).data
+        })
+    
+    return Response({
+        "identified_as": description,
+        "detail": "Could not find a matching item on today's menu."
+    })

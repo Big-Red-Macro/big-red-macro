@@ -180,10 +180,18 @@ def score_item(item, period_goal: dict, user_history: Optional[dict] = None) -> 
         if daily_cal < 2200:
             healthy_bonus = 0.05
 
+    # Gym / High-Protein boost
+    gym_bonus = 0.0
+    if profile and profile.dietary_restrictions and "gym" in [r.lower() for r in profile.dietary_restrictions]:
+        # Reward items that have high protein density (>30% of their calories from protein)
+        if item_vec is not None and item_vec[0] > 0.3:
+            gym_bonus = 0.10
+
     return min(
         _W_COSINE * cosine_score
         + _W_CALFIT * calorie_fit
         + _W_HISTORY * history_score
-        + healthy_bonus,
+        + healthy_bonus
+        + gym_bonus,
         1.0,
     )
