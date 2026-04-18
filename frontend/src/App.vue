@@ -9,7 +9,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <h1 class="text-xl font-bold tracking-tight text-white hidden lg:block">Big Red Macro</h1>
+          <span class="text-sm font-bold text-slate-900 dark:text-white hidden lg:block tracking-tight">Big Red Macro</span>
         </div>
 
         <nav class="space-y-2">
@@ -60,15 +60,9 @@
 </template>
 
 <script setup>
-import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useRoute } from 'vue-router'
+import { useTheme } from '@/composables/useTheme'
 
 const route = useRoute()
-const router = useRouter()
-const auth = useAuthStore()
-
-function doLogout() {
-  auth.logout()
-  router.push('/login')
-}
+const { isDark, toggle } = useTheme()
 </script>

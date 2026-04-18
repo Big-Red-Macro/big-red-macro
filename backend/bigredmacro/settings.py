@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 load_dotenv()
 
@@ -101,6 +102,10 @@ CELERY_BEAT_SCHEDULE = {
     "refresh-daily-menus": {
         "task": "api.tasks.refresh_daily_menus",
         "schedule": 3600,  # every hour
+    },
+    "check-favorites": {
+        "task": "api.tasks.check_favorites_and_notify",
+        "schedule": crontab(hour=4, minute=0),
     },
     "retrain-wait-time-model": {
         "task": "api.tasks.retrain_wait_time_model",

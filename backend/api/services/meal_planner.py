@@ -72,7 +72,7 @@ def _greedy_select(
     """Greedily pick items from a list to approach the period macro goal."""
     scored = sorted(
         candidates,
-        key=lambda i: score_item(i, period_goal, user_history),
+        key=lambda i: score_item(i, period_goal, user_history, profile),
         reverse=True,
     )
     selected = []
@@ -140,7 +140,9 @@ class MealPlannerService:
                 if not candidates:
                     continue
 
-                selected = _greedy_select(candidates, period_goal, user_history=user_history)
+                selected = _greedy_select(
+                    candidates, period_goal, user_history=user_history, profile=profile
+                )
                 if not selected:
                     continue
 

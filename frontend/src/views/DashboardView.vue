@@ -1,69 +1,73 @@
 <template>
-  <div class="min-h-screen bg-slate-900 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-red-900/10 to-red-900/10 p-4 md:p-8">
-    <div class="mx-auto max-w-6xl">
-      
-      <!-- Top nav/header -->
-      <header class="mb-8 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg shadow-red-500/20">
-             <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <h1 class="text-xl font-bold tracking-tight text-white hidden sm:block">Big Red Macro AI</h1>
+  <div class="p-6 md:p-8 max-w-5xl mx-auto">
+
+    <header class="mb-8">
+      <p class="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-widest mb-1">{{ todayFormatted }}</p>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{{ greeting }}, Cornell!</h1>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Left: Itinerary -->
+      <div class="col-span-1 lg:col-span-2">
+        <div v-if="!store.isConnectedToCalendar" class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center">
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Connect Your Calendar</h2>
+          <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">We need to read your schedule to generate a personalized meal itinerary.</p>
+          <router-link to="/connect" class="inline-flex items-center justify-center rounded-xl bg-red-600 hover:bg-red-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors">
+            Sign in with Google
+          </router-link>
         </div>
 
-        <nav class="flex gap-4">
-          <router-link to="/" class="text-sm font-semibold text-white border-b-2 border-red-500 pb-1">Dashboard</router-link>
-          <a href="#" class="text-sm font-medium text-slate-400 hover:text-white transition-colors pb-1">Settings</a>
-        </nav>
-      </header>
-
-      <!-- Main Layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <!-- Left Col: Itinerary -->
-        <div class="col-span-1 lg:col-span-2">
-          
-          <div v-if="!store.isConnectedToCalendar" class="rounded-3xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-xl">
-             <h2 class="text-xl font-bold text-white mb-2">Connect Your Calendar</h2>
-             <p class="text-slate-400 mb-6 text-sm">We need to read your schedule to generate a personalized meal itinerary.</p>
-             <router-link to="/connect" class="inline-flex items-center justify-center rounded-xl bg-red-500 hover:bg-red-600 px-6 py-2.5 text-sm font-semibold text-white transition-all">Sign in with Google</router-link>
+        <div v-else class="space-y-4">
+          <div class="flex items-center justify-between mb-2">
+            <button
+              @click="generatePlan"
+              :disabled="store.isLoading"
+              class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-800 dark:text-white transition-colors disabled:opacity-50"
+            >
+              {{ store.isLoading ? 'Generating...' : 'Generate New Plan' }}
+            </button>
           </div>
 
-          <div v-else class="space-y-4">
-             <div class="flex justify-between items-center mb-2">
-               <button @click="generatePlan" :disabled="store.isLoading" class="rounded-xl border border-white/10 bg-white/10 hover:bg-white/20 px-4 py-2 text-sm font-semibold text-white transition-all disabled:opacity-50">
-                 {{ store.isLoading ? 'Generating Plan...' : 'Generate New Plan' }}
-               </button>
-             </div>
-             
-             <!-- RAG Output display -->
-             <MealTimeline 
-               :date="store.itinerary?.itinerary_date"
-               :meals="store.itinerary?.meals"
-               :summary="store.itinerary?.daily_summary"
-             />
-          </div>
+          <MealTimeline
+            :date="store.itinerary?.itinerary_date"
+            :meals="store.itinerary?.meals ?? []"
+            :summary="store.itinerary?.daily_summary"
+            :is-loading="store.isLoading"
+            :plan-generated="!!store.itinerary"
+          />
+        </div>
+      </div>
 
+      <!-- Right: Widgets -->
+      <div class="col-span-1 space-y-4">
+
+        <!-- Google Calendar status -->
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-bold tracking-widest text-slate-400 dark:text-slate-400 uppercase">Google Calendar</p>
+            <span v-if="store.isConnectedToCalendar" class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Connected</span>
+            <span v-else class="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Offline</span>
+          </div>
+          <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">Syncs daily events to find free meal gaps.</p>
         </div>
 
-        <!-- Right Col: Widgets -->
-        <div class="col-span-1 space-y-8">
-          
-          <!-- Connection Status Widget -->
-          <div class="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl">
-             <div class="flex items-center justify-between">
-               <h3 class="text-xs font-bold tracking-widest text-slate-300 uppercase">Google Calendar</h3>
-               <span v-if="store.isConnectedToCalendar" class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Connected</span>
-               <span v-else class="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-400 uppercase tracking-wider">Offline</span>
-             </div>
-             <p class="mt-4 text-xs text-slate-400">Syncs daily events to find free meal gaps.</p>
+        <!-- Wait Times -->
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-xs font-bold tracking-widest text-slate-400 uppercase">Wait Times</p>
+            <button
+              @click="refreshWaitTimes"
+              :disabled="waitTimesRefreshing"
+              class="flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors disabled:opacity-50"
+            >
+              <svg class="h-3 w-3" :class="{ 'animate-spin': waitTimesRefreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
           </div>
-
-          <!-- Wait Times Widget -->
           <WaitTimeWidget :wait-times="store.waitTimes" />
-
         </div>
 
       </div>
@@ -72,12 +76,24 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useMainStore } from '../stores/mainStore'
 import MealTimeline from '../components/MealTimeline.vue'
 import WaitTimeWidget from '../components/WaitTimeWidget.vue'
 
 const store = useMainStore()
+const waitTimesRefreshing = ref(false)
+
+const greeting = computed(() => {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+})
+
+const todayFormatted = computed(() =>
+  new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+)
 
 onMounted(() => {
   store.fetchWaitTimes()
@@ -86,7 +102,14 @@ onMounted(() => {
   }
 })
 
-const generatePlan = () => {
-  store.generateMealPlan()
+const generatePlan = () => store.generateMealPlan()
+
+async function refreshWaitTimes() {
+  waitTimesRefreshing.value = true
+  try {
+    await store.fetchWaitTimes()
+  } finally {
+    waitTimesRefreshing.value = false
+  }
 }
 </script>

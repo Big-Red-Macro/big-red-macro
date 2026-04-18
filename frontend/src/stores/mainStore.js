@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import api from '../api'
+import api, { getWaitTimes } from '../api'
 
 export const useMainStore = defineStore('main', () => {
   const isConnectedToCalendar = ref(false)
@@ -57,15 +57,19 @@ export const useMainStore = defineStore('main', () => {
     }
   }
 
-  // Wait Times (Mock fetch or real hit to /wait-times/)
+  // Wait Times — real API call with mock fallback for demo
   const fetchWaitTimes = async () => {
-    // A placeholder for hitting /api/wait-times/
-    // Since wait times wasn't fully mocked yet in views, we'll provide some hardcoded data for the demo view.
-    waitTimes.value = [
-      { id: 1, name: 'Becker House', wait_time: 5, capacity: 'low' },
-      { id: 2, name: 'North Star', wait_time: 15, capacity: 'medium' },
-      { id: 3, name: 'Okenshields', wait_time: 35, capacity: 'high' }
-    ]
+    try {
+      const res = await getWaitTimes()
+      waitTimes.value = res.data
+    } catch (e) {
+      // Fallback mock data so the demo works without a backend
+      waitTimes.value = [
+        { id: 1, name: 'Becker House', wait_time: 5, capacity: 'low' },
+        { id: 2, name: 'North Star', wait_time: 15, capacity: 'medium' },
+        { id: 3, name: 'Okenshields', wait_time: 35, capacity: 'high' }
+      ]
+    }
   }
 
   return {

@@ -1,37 +1,10 @@
 import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
 
 const api = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Attach JWT to every request
-api.interceptors.request.use((config) => {
-  const auth = useAuthStore()
-  if (auth.token) {
-    config.headers.Authorization = `Bearer ${auth.token}`
-  }
-  return config
-})
-
-// Auto-refresh on 401
-api.interceptors.response.use(
-  (res) => res,
-  async (err) => {
-    const auth = useAuthStore()
-    if (err.response?.status === 401 && !err.config._retry) {
-      err.config._retry = true
-      const refreshed = await auth.refreshToken()
-      if (refreshed) {
-        err.config.headers.Authorization = `Bearer ${auth.token}`
-        return api(err.config)
-      }
-      auth.logout()
-    }
-    return Promise.reject(err)
-  }
-)
 
 export default api
 

@@ -23,6 +23,7 @@ services:
       - DJANGO_SETTINGS_MODULE=bigredmacro.settings
       - MONGODB_URI=mongodb://mongo:27017/bigredmacro
       - REDIS_URL=redis://redis:6379/0
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     depends_on:
       - mongo
       - redis
@@ -36,6 +37,7 @@ services:
       - DJANGO_SETTINGS_MODULE=bigredmacro.settings
       - MONGODB_URI=mongodb://mongo:27017/bigredmacro
       - REDIS_URL=redis://redis:6379/0
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     depends_on:
       - mongo
       - redis
@@ -50,6 +52,7 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_BASE=/api
+      - VITE_MAPBOX_TOKEN=${MAPBOX_ACCESS_TOKEN}
       - PROXY_TARGET=http://backend:8000
 
 volumes:

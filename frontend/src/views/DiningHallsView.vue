@@ -61,6 +61,7 @@
            </div>
         </div>
       </div>
+    </div>
 
       <!-- Selected Hall View -->
       <div v-else class="animate-fade-in">
@@ -76,12 +77,29 @@
             <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">BRBs: {{ selectedHall.accepts_brbs ? 'Yes' : 'No' }}</span>
             <span v-if="selectedHall._distance != null" class="rounded-full bg-cornell-red/20 px-3 py-1 text-xs font-bold text-cornell-300">{{ selectedHall._distance }} mi away</span>
           </div>
+        </div>
+      </div>
+    </div>
 
           <div v-if="loadingMenu" class="py-12 flex justify-center">
             <div class="h-8 w-8 rounded-full border-4 border-cornell-red border-t-transparent animate-spin"></div>
           </div>
-          <div v-else-if="!menus.length" class="text-center py-12 text-slate-400">
-            No menus available for today.
+        </div>
+
+        <!-- Menu skeleton -->
+        <div v-if="loadingMenu" class="space-y-8 animate-pulse">
+          <div v-for="n in 2" :key="n" class="space-y-3">
+            <div class="h-3 w-28 rounded bg-slate-200 dark:bg-slate-700"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div v-for="m in 6" :key="m" class="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4 border border-slate-200 dark:border-slate-700">
+                <div class="h-4 w-3/4 rounded bg-slate-200 dark:bg-slate-700 mb-2"></div>
+                <div class="h-3 w-1/3 rounded bg-slate-100 dark:bg-slate-700/60 mb-3"></div>
+                <div class="flex gap-1">
+                  <div class="h-3 w-10 rounded bg-slate-100 dark:bg-slate-700/60"></div>
+                  <div class="h-3 w-10 rounded bg-slate-100 dark:bg-slate-700/60"></div>
+                </div>
+              </div>
+            </div>
           </div>
           <div v-else class="space-y-10">
             <div v-for="menu in menus" :key="menu.meal_period" class="space-y-4">
@@ -105,13 +123,38 @@
                     </svg>
                   </button>
                 </div>
-
+                <button
+                  @click.stop="toggleFavorite(item.name)"
+                  class="shrink-0 p-1.5 rounded-lg transition-colors"
+                  :class="isFavorite(item.name) ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 bg-slate-100 dark:bg-slate-700/50'"
+                >
+                  <svg class="h-4 w-4" :fill="isFavorite(item.name) ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Toast -->
+    <transition
+      enter-active-class="transition-all duration-200 ease-out"
+      enter-from-class="opacity-0 translate-y-2"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition-all duration-150 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-2"
+    >
+      <div
+        v-if="toast.visible"
+        class="fixed bottom-6 right-6 z-50 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-900 dark:text-white shadow-xl"
+      >
+        {{ toast.message }}
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -119,14 +162,42 @@
 import { ref, computed, onMounted } from 'vue'
 import { getDiningHalls, getDiningHallMenu, getProfile, toggleFavoriteMeal } from '@/api'
 
+// Inline hall card component to avoid extra file
+const HallCard = {
+  props: ['hall', 'isOpen', 'isClosingSoon'],
+  emits: ['click'],
+  template: `
+    <div
+      @click="$emit('click')"
+      class="group cursor-pointer flex flex-col rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 p-5 transition-colors active:scale-95"
+    >
+      <h2 class="text-sm font-semibold text-slate-900 dark:text-white mb-1">{{ hall.name }}</h2>
+      <p class="text-xs text-slate-400 dark:text-slate-500 mb-4 uppercase tracking-wider">{{ hall.campus_area || 'Campus' }}</p>
+      <div class="mt-auto flex items-center gap-2 flex-wrap">
+        <span v-if="isOpen" class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
+          Open
+        </span>
+        <span v-else class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-400 dark:text-slate-500">
+          <span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-500"></span>
+          Closed
+        </span>
+        <span v-if="isOpen && isClosingSoon" class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+          Closing Soon
+        </span>
+      </div>
+    </div>
+  `
+}
+
 const halls = ref([])
 const loadingHalls = ref(false)
-
 const selectedHall = ref(null)
 const menus = ref([])
 const loadingMenu = ref(false)
-
 const favoriteMeals = ref(new Set())
+const toast = ref({ visible: false, message: '' })
+let toastTimer = null
 
 const userLocation = ref(null)
 
@@ -134,10 +205,11 @@ const userLocation = ref(null)
 const filterStatus = ref('all') // 'all', 'open', 'closed'
 const filterArea = ref('all')
 
-const uniqueAreas = computed(() => {
-  const areas = new Set(halls.value.map(h => h.campus_area).filter(a => a))
-  return Array.from(areas).sort()
-})
+const regions = [
+  { key: 'North', label: 'North Campus' },
+  { key: 'Central', label: 'Central Campus' },
+  { key: 'West', label: 'West Campus' },
+]
 
 // Haversine distance (miles)
 function haversine(lat1, lon1, lat2, lon2) {
@@ -201,10 +273,7 @@ onMounted(async () => {
 
   loadingHalls.value = true
   try {
-    const [hallsRes, profileRes] = await Promise.all([
-      getDiningHalls(),
-      getProfile()
-    ])
+    const [hallsRes, profileRes] = await Promise.all([getDiningHalls(), getProfile()])
     halls.value = hallsRes.data
     attachDistances()
     const favs = profileRes.data.favorite_meals || []
@@ -216,6 +285,17 @@ onMounted(async () => {
   }
 })
 
+function parseTimeToday(timeStr) {
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  const d = new Date()
+  d.setHours(hours, minutes, 0, 0)
+  return d
+}
+
+function getTodayName() {
+  return new Date().toLocaleDateString('en-US', { weekday: 'long' })
+}
+
 function isOpen(hall) {
   return !!hall.operating_hours && Object.keys(hall.operating_hours).length > 0;
 }
@@ -224,7 +304,6 @@ async function openHall(hall) {
   selectedHall.value = hall
   loadingMenu.value = true
   menus.value = []
-  
   try {
     const today = new Date().toISOString().split('T')[0]
     const res = await getDiningHallMenu(hall.id, today)
@@ -236,18 +315,18 @@ async function openHall(hall) {
   }
 }
 
-function isFavorite(name) {
-  return favoriteMeals.value.has(name)
+function isFavorite(name) { return favoriteMeals.value.has(name) }
+
+function showToast(message) {
+  if (toastTimer) clearTimeout(toastTimer)
+  toast.value = { visible: true, message }
+  toastTimer = setTimeout(() => { toast.value.visible = false }, 2000)
 }
 
 async function toggleFavorite(name) {
-  const isFav = isFavorite(name)
-  if (isFav) {
-    favoriteMeals.value.delete(name)
-  } else {
-    favoriteMeals.value.add(name)
-  }
-  
+  const wasFav = isFavorite(name)
+  wasFav ? favoriteMeals.value.delete(name) : favoriteMeals.value.add(name)
+  showToast(wasFav ? 'Removed from favorites' : 'Added to favorites')
   try {
     const res = await toggleFavoriteMeal(name)
     favoriteMeals.value = new Set(res.data.favorite_meals)
