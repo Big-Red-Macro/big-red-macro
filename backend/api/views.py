@@ -238,9 +238,14 @@ def calendar_callback(request):
         return Response({"error": "Failed to exchange token"}, status=status.HTTP_400_BAD_REQUEST)
     
     profile = UserProfile.objects(django_user_id=request.user.id).first()
-    if profile:
-        profile.google_auth_token = token_dict
-        profile.save()
+    if not profile:
+        return Response(
+            {"error": "Profile not found. Please complete profile setup before connecting your calendar."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    profile.google_auth_token = token_dict
+    profile.save()
     
     return Response({
         "message": "Successfully exchanged code and saved to user profile.",
