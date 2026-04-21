@@ -5,6 +5,7 @@ import CampusMapView from '../views/CampusMapView.vue'
 import ConnectView from '../views/ConnectView.vue'
 import CallbackView from '../views/CallbackView.vue'
 import OnboardingView from '../views/OnboardingView.vue'
+import Profile from '../views/Profile.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,6 +41,11 @@ const router = createRouter({
       name: 'calendar-callback',
       component: CallbackView,
       meta: { hideNav: true }
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: Profile
     }
   ]
 })

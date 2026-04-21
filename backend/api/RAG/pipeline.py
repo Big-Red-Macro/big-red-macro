@@ -10,7 +10,7 @@ from api.models import UserProfile, DailyMenu
 
 logger = logging.getLogger(__name__)
 
-# Pydantic models for structured output
+# Pydantic models for structured output: Need to work on this, its a bit cooked
 class MealSuggestion(BaseModel):
     meal_time: str = Field(description="The suggested time to eat, e.g., '12:15 PM'")
     dining_hall_name: str = Field(description="The name of the dining hall")
@@ -23,9 +23,9 @@ class DailyItinerary(BaseModel):
     meals: List[MealSuggestion] = Field(description="Suggested meals for the day")
     daily_summary: str = Field(description="A brief summary or encouragement for the user's day")
 
-def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: str) -> dict:
+def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: str):
     """
-    Generate an AI-powered meal plan using Gemini 1.5 Flash and LangChain.
+    Generate an AI-powered meal plan using Gemini (1.5 Flash) and LangChain.
     """
     # Load API key from environment (set in .env)
     user_key = os.getenv("GEMINI_API_KEY")
@@ -73,7 +73,7 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
 
     # LangChain + Gemini
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model="gemini-2.0-flash",
         temperature=0.2,
     )
     
@@ -105,7 +105,7 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
             "target_date": target_date,
             "context_str": context_str
         })
-        return res.dict()
+        return res.model_dump() if hasattr(res, "model_dump") else res.dict()
     except Exception as e:
         logger.error(f"Failed to generate RAG meal plan: {e}")
         return {"error": str(e)}
