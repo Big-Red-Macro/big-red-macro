@@ -69,6 +69,21 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
     if not preferences_str:
         preferences_str = "No specific dietary restrictions or favorites."
 
+    body_str = ""
+    if getattr(profile, 'height_cm', None) and getattr(profile, 'weight_kg', None):
+        body_str += f"- Height: {profile.height_cm} cm, Weight: {profile.weight_kg} kg"
+        if getattr(profile, 'age', None):
+            body_str += f", Age: {profile.age}"
+        if getattr(profile, 'sex', None):
+            body_str += f", Sex: {profile.sex}"
+        body_str += "\n"
+    if getattr(profile, 'activity_level', None):
+        body_str += f"- Activity Level: {profile.activity_level}\n"
+    if getattr(profile, 'fitness_goal', None):
+        body_str += f"- Fitness Goal: {profile.fitness_goal}\n"
+    if not body_str:
+        body_str = "No body metrics provided."
+
     gaps_str = json.dumps(gaps, indent=2)
 
     # LangChain + Gemini
@@ -84,14 +99,17 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
                    "You must strictly adhere to the user's dietary restrictions (e.g. if they are vegan, ONLY select vegan items). "
                    "Try to incorporate their favorite foods if they are available on the menus today. "
                    "Return the result nicely formatted according to the required schema."),
-        ("human", "User's Macro Goals: {macro_text}\n"
+        ("human", "User's Body Metrics & Physical Profile:\n{body_str}\n\n"
+                  "User's Macro Goals: {macro_text}\n"
                   "User's Dietary Preferences & Needs:\n{preferences_str}\n\n"
                   "User's Free Time Blocks (gaps in schedule): {gaps_str}\n"
                   "Target Date: {target_date}\n\n"
                   "Available Menus Highlight:\n{context_str}\n\n"
                   "Plan exactly one meal for each major time block (e.g. Breakfast, Lunch, Dinner) "
                   "if the gaps align with typical meal times. Pick specific items from the menus "
-                  "provided to hit the macro goals and satisfy dietary needs. Return the final structured output.")
+                  "provided to hit the macro goals and satisfy dietary needs. Consider the user's fitness goal "
+                  "and body metrics when selecting portion sizes and macronutrient balance. "
+                  "Return the final structured output.")
     ])
 
     structured_llm = llm.with_structured_output(DailyItinerary)
@@ -99,13 +117,14 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
 
     try:
         res: DailyItinerary = chain.invoke({
+            "body_str": body_str,
             "macro_text": macro_text,
             "preferences_str": preferences_str,
             "gaps_str": gaps_str,
             "target_date": target_date,
             "context_str": context_str
         })
-        return res.dict()
+        return res.model_dump()
     except Exception as e:
         logger.error(f"Failed to generate RAG meal plan: {e}")
         return {"error": str(e)}

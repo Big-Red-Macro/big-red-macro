@@ -29,6 +29,7 @@ import { ref } from 'vue'
 import { GoogleLogin } from 'vue3-google-login'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getProfile } from '@/api'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -37,10 +38,21 @@ const error = ref('')
 async function onGoogleLogin(response) {
   try {
     await auth.loginGoogle(response.credential)
-    router.push('/')
   } catch (e) {
     console.error(e)
     error.value = 'Sign in failed. Please try again.'
+    return
+  }
+  try {
+    const profileRes = await getProfile()
+    if (!profileRes.data.onboarding_complete) {
+      router.push('/onboarding')
+    } else {
+      router.push('/')
+    }
+  } catch (e) {
+    console.error(e)
+    router.push('/onboarding')
   }
 }
 </script>

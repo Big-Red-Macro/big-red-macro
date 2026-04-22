@@ -64,9 +64,8 @@ def user_profile(request):
 
     if request.method == "GET":
         if not profile:
-            return Response(
-                {"detail": "Profile not set up yet."}, status=status.HTTP_404_NOT_FOUND
-            )
+            profile = UserProfile(django_user_id=request.user.id)
+            profile.save()
         return Response(UserProfileSerializer(profile).data)
 
     # PUT
@@ -78,6 +77,8 @@ def user_profile(request):
         profile = UserProfile(django_user_id=request.user.id)
 
     for field, value in data.items():
+        if field == "macro_goals":
+            continue
         setattr(profile, field, value)
 
     if "macro_goals" in data:

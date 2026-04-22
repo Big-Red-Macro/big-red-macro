@@ -27,6 +27,7 @@ class DiningHallSerializer(serializers.Serializer):
     id = serializers.CharField(source="pk")
     name = serializers.CharField()
     short_name = serializers.CharField()
+    campus_area = serializers.CharField(allow_blank=True, default="")
     location_lat = serializers.FloatField()
     location_lng = serializers.FloatField()
     dining_type = serializers.CharField()
@@ -51,6 +52,19 @@ class UserProfileSerializer(serializers.Serializer):
         default="traditional",
     )
     home_location = serializers.DictField(required=False)
+    height_cm = serializers.FloatField(required=False, allow_null=True)
+    weight_kg = serializers.FloatField(required=False, allow_null=True)
+    age = serializers.IntegerField(required=False, allow_null=True)
+    sex = serializers.ChoiceField(choices=["male", "female", "other"], required=False, allow_null=True)
+    activity_level = serializers.ChoiceField(
+        choices=["sedentary", "lightly_active", "moderately_active", "very_active"],
+        default="moderately_active",
+    )
+    fitness_goal = serializers.ChoiceField(
+        choices=["lose", "maintain", "gain"],
+        default="maintain",
+    )
+    onboarding_complete = serializers.BooleanField(default=False)
     has_calendar_connected = serializers.SerializerMethodField()
 
     def get_has_calendar_connected(self, obj):

@@ -116,6 +116,19 @@ class UserProfile(Document):
         default="traditional",
     )
     google_auth_token = DictField()
+    height_cm = FloatField()
+    weight_kg = FloatField()
+    age = IntField()
+    sex = StringField(choices=["male", "female", "other"])
+    activity_level = StringField(
+        choices=["sedentary", "lightly_active", "moderately_active", "very_active"],
+        default="moderately_active",
+    )
+    fitness_goal = StringField(
+        choices=["lose", "maintain", "gain"],
+        default="maintain",
+    )
+    onboarding_complete = BooleanField(default=False)
     favorite_meals = ListField(StringField())
     updated_at = DateTimeField(default=datetime.utcnow)
 
