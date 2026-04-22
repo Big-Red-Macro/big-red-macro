@@ -23,6 +23,11 @@
             <span class="hidden lg:block font-medium">AI Planner</span>
           </router-link>
 
+          <router-link to="/map" class="flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5 group" active-class="bg-gradient-to-r from-cornell-red/20 to-cornell-700/10 text-white border border-cornell-red/20 shadow-sm backdrop-blur-sm">
+            <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+            <span class="hidden lg:block font-medium">Campus Map</span>
+          </router-link>
+
           <router-link to="/connect" class="flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5 group" active-class="bg-gradient-to-r from-cornell-red/20 to-cornell-700/10 text-white border border-cornell-red/20 shadow-sm backdrop-blur-sm">
             <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             <span class="hidden lg:block font-medium">Settings</span>
@@ -60,9 +65,17 @@
 </template>
 
 <script setup>
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from '@/composables/useTheme'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
 const { isDark, toggle } = useTheme()
+const auth = useAuthStore()
+
+function doLogout() {
+  auth.logout()
+  router.push('/connect')
+}
 </script>

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import api, { getWaitTimes } from '../api'
+import api, { getWaitTimes, getProfile } from '../api'
 
 export const useMainStore = defineStore('main', () => {
   const isConnectedToCalendar = ref(false)
@@ -9,6 +9,18 @@ export const useMainStore = defineStore('main', () => {
   const tokenDict = ref(null)
   const isLoading = ref(false)
   const currentError = ref(null)
+
+  // Check if calendar already connected via stored profile token
+  const checkCalendarStatus = async () => {
+    try {
+      const res = await getProfile()
+      if (res.data.has_calendar_connected) {
+        isConnectedToCalendar.value = true
+      }
+    } catch (e) {
+      // not logged in yet, ignore
+    }
+  }
 
   // Fetch Auth URL
   const getConnectUrl = async () => {
@@ -79,6 +91,7 @@ export const useMainStore = defineStore('main', () => {
     tokenDict,
     isLoading,
     currentError,
+    checkCalendarStatus,
     getConnectUrl,
     submitCalendarCode,
     generateMealPlan,

@@ -64,7 +64,8 @@ import MealTimeline from '../components/MealTimeline.vue'
 const store = useMainStore()
 const router = useRouter()
 
-onMounted(() => {
+onMounted(async () => {
+  await store.checkCalendarStatus()
   if (store.isConnectedToCalendar && !store.itinerary) {
     store.generateMealPlan()
   }

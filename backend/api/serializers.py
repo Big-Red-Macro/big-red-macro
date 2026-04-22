@@ -51,6 +51,10 @@ class UserProfileSerializer(serializers.Serializer):
         default="traditional",
     )
     home_location = serializers.DictField(required=False)
+    has_calendar_connected = serializers.SerializerMethodField()
+
+    def get_has_calendar_connected(self, obj):
+        return bool(getattr(obj, 'google_auth_token', None))
 
 
 class MealSerializer(serializers.Serializer):
