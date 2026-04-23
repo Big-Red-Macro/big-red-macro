@@ -51,10 +51,11 @@ export const useMainStore = defineStore('main', () => {
   }
 
   // Generate Meal Plan
-  const generateMealPlan = async () => {
+  const generateMealPlan = async (date = null) => {
     isLoading.value = true
     try {
       const body = { google_auth_token: tokenDict.value || {} }
+      if (date) body.date = date
       const res = await api.post('/meal-plan/generate-ai/', body)
       if (res.data.ai_plan && !res.data.ai_plan.error) {
         itinerary.value = res.data.ai_plan

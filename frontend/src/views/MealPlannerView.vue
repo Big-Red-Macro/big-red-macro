@@ -57,16 +57,21 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useMainStore } from '../stores/mainStore'
 import MealTimeline from '../components/MealTimeline.vue'
 
 const store = useMainStore()
 const router = useRouter()
+const route = useRoute()
 
 onMounted(async () => {
   await store.checkCalendarStatus()
-  if (store.isConnectedToCalendar && !store.itinerary) {
+  // If redirected here from dining halls with a specific date, auto-generate
+  const dateParam = route.query.date
+  if (dateParam && store.isConnectedToCalendar) {
+    store.generateMealPlan(dateParam)
+  } else if (store.isConnectedToCalendar && !store.itinerary) {
     store.generateMealPlan()
   }
 })
