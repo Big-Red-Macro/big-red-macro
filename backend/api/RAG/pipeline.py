@@ -71,7 +71,11 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
 
     body_str = ""
     if getattr(profile, 'height_cm', None) and getattr(profile, 'weight_kg', None):
-        body_str += f"- Height: {profile.height_cm} cm, Weight: {profile.weight_kg} kg"
+        total_inches = profile.height_cm / 2.54
+        feet = int(total_inches // 12)
+        inches = round(total_inches % 12)
+        lbs = round(profile.weight_kg / 0.453592)
+        body_str += f"- Height: {feet}'{inches}\", Weight: {lbs} lbs"
         if getattr(profile, 'age', None):
             body_str += f", Age: {profile.age}"
         if getattr(profile, 'sex', None):
