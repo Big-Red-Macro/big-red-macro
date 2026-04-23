@@ -121,7 +121,7 @@
         <div v-else-if="menus.length === 0" class="py-20 flex flex-col items-center gap-4 text-center">
           <div class="h-14 w-14 rounded-2xl bg-[#141e30] border border-slate-700 flex items-center justify-center">
             <svg class="w-7 h-7 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18M3 7h3a3 3 0 0 1 0 6H3M21 3v4a4 4 0 0 1-4 4h-1v7"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/>
             </svg>
           </div>
           <div>

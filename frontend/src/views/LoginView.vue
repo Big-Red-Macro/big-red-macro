@@ -6,7 +6,7 @@
         <!-- Icon -->
         <div class="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#B31B1B] shadow-lg shadow-[#B31B1B]/30">
           <svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18M3 7h3a3 3 0 0 1 0 6H3M21 3v4a4 4 0 0 1-4 4h-1v7" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/>
           </svg>
         </div>
 
