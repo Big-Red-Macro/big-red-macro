@@ -1,20 +1,21 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-slate-900 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-red-900/20 to-red-900/20 p-6">
-    <div class="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
-      <div class="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-red-500/20 blur-[80px]"></div>
-      <div class="absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-red-500/20 blur-[80px]"></div>
+  <div class="min-h-screen flex items-center justify-center bg-[#0f172a]">
+    <div class="w-full max-w-md mx-4">
+      <div class="rounded-2xl bg-[#1c1528] p-10 flex flex-col items-center text-center shadow-2xl">
 
-      <div class="relative z-10 flex flex-col items-center text-center">
-        <div class="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg shadow-red-500/30">
-          <svg class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <!-- Icon -->
+        <div class="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#B31B1B] shadow-lg shadow-[#B31B1B]/30">
+          <svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18M3 7h3a3 3 0 0 1 0 6H3M21 3v4a4 4 0 0 1-4 4h-1v7" />
           </svg>
         </div>
 
-        <h1 class="mb-2 text-3xl font-bold tracking-tight text-white">Big Red Macro</h1>
-        <p class="mb-8 text-sm text-slate-400">Your AI-powered Cornell dining planner. Sign in with Google to get started.</p>
+        <!-- Title -->
+        <h1 class="text-2xl font-bold text-white mb-2 tracking-tight">Big Red Macro</h1>
+        <p class="text-slate-400 text-sm mb-8 leading-relaxed">AI-powered nutrition planning for Cornell dining</p>
 
-        <div class="flex justify-center w-full">
+        <!-- Google Sign In -->
+        <div class="w-full flex justify-center">
           <GoogleLogin :callback="onGoogleLogin" />
         </div>
 
