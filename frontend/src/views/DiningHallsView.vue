@@ -61,29 +61,23 @@
            </div>
         </div>
       </div>
-    </div>
-
-      <!-- Selected Hall View -->
       <div v-else class="animate-fade-in">
         <button @click="selectedHall = null" class="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-white transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
           Back to list
         </button>
 
-        <div class="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
+        <div class="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl mb-6">
           <h2 class="text-3xl font-bold text-white mb-2">{{ selectedHall.name }}</h2>
-          <div class="flex flex-wrap gap-2 mb-8">
+          <div class="flex flex-wrap gap-2 mb-4">
             <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">Swipes: {{ selectedHall.accepts_meal_swipe ? 'Yes' : 'No' }}</span>
             <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">BRBs: {{ selectedHall.accepts_brbs ? 'Yes' : 'No' }}</span>
             <span v-if="selectedHall._distance != null" class="rounded-full bg-cornell-red/20 px-3 py-1 text-xs font-bold text-cornell-300">{{ selectedHall._distance }} mi away</span>
           </div>
         </div>
-      </div>
-    </div>
 
-          <div v-if="loadingMenu" class="py-12 flex justify-center">
-            <div class="h-8 w-8 rounded-full border-4 border-cornell-red border-t-transparent animate-spin"></div>
-          </div>
+        <div v-if="loadingMenu" class="py-12 flex justify-center">
+          <div class="h-8 w-8 rounded-full border-4 border-cornell-red border-t-transparent animate-spin"></div>
         </div>
 
         <!-- Menu skeleton -->
@@ -101,7 +95,9 @@
               </div>
             </div>
           </div>
-          <div v-else class="space-y-10">
+          </div>
+
+      <div v-else class="space-y-10">
             <div v-for="menu in menus" :key="menu.meal_period" class="space-y-4">
               <h3 class="text-lg font-bold text-cornell-400 uppercase tracking-widest border-b border-white/10 pb-2">{{ menu.meal_period }}</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
@@ -123,23 +119,10 @@
                     </svg>
                   </button>
                 </div>
-                <button
-                  @click.stop="toggleFavorite(item.name)"
-                  class="shrink-0 p-1.5 rounded-lg transition-colors"
-                  :class="isFavorite(item.name) ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 bg-slate-100 dark:bg-slate-700/50'"
-                >
-                  <svg class="h-4 w-4" :fill="isFavorite(item.name) ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                </button>
               </div>
             </div>
-          </div>
-        </div>
       </div>
-    </div>
-
-    <!-- Toast -->
+    </div>    <!-- Toast -->
     <transition
       enter-active-class="transition-all duration-200 ease-out"
       enter-from-class="opacity-0 translate-y-2"
@@ -156,6 +139,7 @@
       </div>
     </transition>
   </div>
+</div>
 </template>
 
 <script setup>

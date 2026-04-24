@@ -17,8 +17,7 @@ from api.serializers import (
 from api.services.dining_api import CornellDiningClient
 from api.services.meal_planner import MealPlannerService
 from api.services.wait_time import WaitTimeService
-from api.services.calendar_api import get_authorization_url, exchange_code, get_free_time_blocks
-from api.RAG.pipeline import generate_rag_meal_plan
+from api.RAG.pipeline import generate_rag_meal_plan, chatbot_query
 
 
 
@@ -211,67 +210,39 @@ def refresh_menus(request):
 
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def calendar_connect(request):
-    redirect_uri = "http://localhost:5173/calendar-callback"
-    url, state, code_verifier = get_authorization_url(redirect_uri)
-    if url:
-        if code_verifier and state:
-            cache.set(f"pkce_{state}", code_verifier, timeout=600)
-        return Response({"auth_url": url}, status=status.HTTP_200_OK)
-    return Response({"error": "Failed to generate auth url"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def calendar_callback(request):
-    code = request.GET.get('code') or request.data.get('code')
-    state = request.GET.get('state') or request.data.get('state')
-    if not code:
-        return Response({"error": "No code provided"}, status=status.HTTP_400_BAD_REQUEST)
-    
-    code_verifier = cache.get(f"pkce_{state}") if state else None
-    
-    redirect_uri = "http://localhost:5173/calendar-callback"
-    token_dict = exchange_code(code, redirect_uri, code_verifier)
-    if not token_dict:
-        return Response({"error": "Failed to exchange token"}, status=status.HTTP_400_BAD_REQUEST)
-    
-    profile = UserProfile.objects(django_user_id=request.user.id).first()
-    if profile:
-        profile.google_auth_token = token_dict
-        profile.save()
-    
-    return Response({
-        "message": "Successfully exchanged code and saved to user profile.",
-        "token_dict": token_dict
-    }, status=status.HTTP_200_OK)
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_ai_meal_plan(request):
     target_date_str = request.data.get("date", date.today().isoformat())
-    token_dict = request.data.get("google_auth_token", {})
     
     profile = UserProfile.objects(django_user_id=request.user.id).first()
     if not profile:
         return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-    if token_dict and profile:
-        profile.google_auth_token = token_dict
-        profile.save()
-    elif not token_dict and profile.google_auth_token:
-        token_dict = profile.google_auth_token
 
     try:
         target_date = date.fromisoformat(target_date_str)
     except ValueError:
         target_date = date.today()
         
-    gaps = get_free_time_blocks(token_dict, target_date)
-    
-    result = generate_rag_meal_plan(profile, gaps, target_date_str)
+    result = generate_rag_meal_plan(profile, target_date_str)
     return Response({"ai_plan": result}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def chatbot_ask(request):
+    question = request.data.get("question")
+    target_date_str = request.data.get("date", date.today().isoformat())
+    
+    if not question:
+        return Response({"error": "Question is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        target_date = date.fromisoformat(target_date_str)
+    except ValueError:
+        target_date = date.today()
+        
+    result = chatbot_query(question, target_date_str)
+    return Response(result, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

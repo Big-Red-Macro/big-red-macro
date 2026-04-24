@@ -3,46 +3,18 @@ import { ref } from 'vue'
 import api, { getWaitTimes } from '../api'
 
 export const useMainStore = defineStore('main', () => {
-  const isConnectedToCalendar = ref(false)
   const waitTimes = ref([])
   const itinerary = ref(null)
-  const tokenDict = ref(null)
   const isLoading = ref(false)
   const currentError = ref(null)
+  const chatbotMessages = ref([])
 
-  // Fetch Auth URL
-  const getConnectUrl = async () => {
-    try {
-      const response = await api.get('/calendar/connect/')
-      return response.data.auth_url
-    } catch (e) {
-      console.error("Failed to generate connect URL", e)
-      currentError.value = "Failed to connect to Google Services."
-      return null
-    }
-  }
-
-  // Receive callback
-  const submitCalendarCode = async (code, state) => {
-    isLoading.value = true
-    try {
-      // For local demo, we might get a token dictionary back
-      const res = await api.get('/calendar/callback/', { params: { code, state } })
-      tokenDict.value = res.data.token_dict
-      isConnectedToCalendar.value = true
-    } catch (e) {
-      console.error(e)
-      currentError.value = "Failed to authenticate with Google."
-    } finally {
-      isLoading.value = false
-    }
-  }
 
   // Generate Meal Plan
   const generateMealPlan = async () => {
     isLoading.value = true
     try {
-      const body = { google_auth_token: tokenDict.value || {} }
+      const body = {}
       const res = await api.post('/meal-plan/generate-ai/', body)
       if (res.data.ai_plan && !res.data.ai_plan.error) {
         itinerary.value = res.data.ai_plan
@@ -71,17 +43,31 @@ export const useMainStore = defineStore('main', () => {
       ]
     }
   }
+  const askChatbot = async (question) => {
+    isLoading.value = true
+    try {
+      const res = await api.post('/chatbot/ask/', { question })
+      if (res.data && res.data.answer) {
+        chatbotMessages.value.push({ role: 'bot', text: res.data.answer })
+      } else {
+        chatbotMessages.value.push({ role: 'bot', text: res.data.error || "Sorry, I couldn't understand that." })
+      }
+    } catch (e) {
+      console.error(e)
+      chatbotMessages.value.push({ role: 'bot', text: "An error occurred while talking to the chatbot." })
+    } finally {
+      isLoading.value = false
+    }
+  }
 
   return {
-    isConnectedToCalendar,
     waitTimes,
     itinerary,
-    tokenDict,
     isLoading,
     currentError,
-    getConnectUrl,
-    submitCalendarCode,
+    chatbotMessages,
     generateMealPlan,
-    fetchWaitTimes
+    fetchWaitTimes,
+    askChatbot
   }
 })

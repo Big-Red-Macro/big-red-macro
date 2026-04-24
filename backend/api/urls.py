@@ -16,10 +16,9 @@ urlpatterns = [
     path("checkin/", views.record_checkin, name="checkin"),
     # Admin
     path("admin/refresh-menus/", views.refresh_menus, name="refresh-menus"),
-    # Google Calendar & RAG AI
-    path("calendar/connect/", views.calendar_connect, name="calendar-connect"),
-    path("calendar/callback/", views.calendar_callback, name="calendar-callback"),
+    # Chatbot & RAG AI
     path("meal-plan/generate-ai/", views.generate_ai_meal_plan, name="generate-ai"),
+    path("chatbot/ask/", views.chatbot_ask, name="chatbot-ask"),
     # Vision API
     path("vision/log-meal/", views.log_meal_from_image, name="log-meal-from-image"),
 ]
