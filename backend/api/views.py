@@ -23,7 +23,7 @@ from api.RAG.pipeline import generate_rag_meal_plan, chatbot_query
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def dining_halls(request):
     """List all Cornell dining halls."""
     halls = DiningHall.objects.all()
@@ -31,7 +31,7 @@ def dining_halls(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def dining_hall_menu(request, hall_id: str):
     """Get today's (or a specific date's) menu for a dining hall."""
     target_date = request.query_params.get("date", date.today().isoformat())
@@ -56,10 +56,10 @@ def dining_hall_menu(request, hall_id: str):
 
 
 @api_view(["GET", "PUT"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def user_profile(request):
     """Get or update the current user's profile."""
-    profile = UserProfile.objects(django_user_id=request.user.id).first()
+    profile = UserProfile.objects(django_user_id=1).first()
 
     if request.method == "GET":
         if not profile:
@@ -74,7 +74,7 @@ def user_profile(request):
     data = serializer.validated_data
 
     if not profile:
-        profile = UserProfile(django_user_id=request.user.id)
+        profile = UserProfile(django_user_id=1)
 
     for field, value in data.items():
         setattr(profile, field, value)
@@ -87,12 +87,12 @@ def user_profile(request):
     return Response(UserProfileSerializer(profile).data)
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def toggle_favorite_meal(request):
     """Toggle a meal name in the user's favorite_meals list."""
-    profile = UserProfile.objects(django_user_id=request.user.id).first()
+    profile = UserProfile.objects(django_user_id=1).first()
     if not profile:
-        profile = UserProfile(django_user_id=request.user.id)
+        profile = UserProfile(django_user_id=1)
         profile.save()
 
     meal_name = request.data.get("meal_name")
@@ -112,10 +112,10 @@ def toggle_favorite_meal(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def generate_meal_plan(request):
     """Generate a personalized daily meal plan."""
-    profile = UserProfile.objects(django_user_id=request.user.id).first()
+    profile = UserProfile.objects(django_user_id=1).first()
     if not profile:
         return Response(
             {"detail": "Please complete your profile before generating a meal plan."},
@@ -136,12 +136,12 @@ def generate_meal_plan(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def meal_plan_history(request):
     """Return the user's past and current meal plans."""
     from api.models import MealPlan
 
-    plans = MealPlan.objects(django_user_id=request.user.id).order_by("-date").limit(14)
+    plans = MealPlan.objects(django_user_id=1).order_by("-date").limit(14)
     return Response(MealPlanSerializer(plans, many=True).data)
 
 
@@ -149,7 +149,7 @@ def meal_plan_history(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def wait_times(request):
     """Return current predicted wait times for all dining halls."""
     period = request.query_params.get("period", "lunch")
@@ -169,7 +169,7 @@ def wait_times(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def record_checkin(request):
     """Record a dining hall check-in (geofence trigger) and log wait time."""
     hall_id = request.data.get("dining_hall_id")
@@ -192,7 +192,7 @@ def record_checkin(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def refresh_menus(request):
     """Manually trigger a Cornell Dining API menu refresh (admin only)."""
     if not request.user.is_staff:
@@ -211,11 +211,11 @@ def refresh_menus(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def generate_ai_meal_plan(request):
     target_date_str = request.data.get("date", date.today().isoformat())
     
-    profile = UserProfile.objects(django_user_id=request.user.id).first()
+    profile = UserProfile.objects(django_user_id=1).first()
     if not profile:
         return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -228,7 +228,7 @@ def generate_ai_meal_plan(request):
     return Response({"ai_plan": result}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def chatbot_ask(request):
     question = request.data.get("question")
     target_date_str = request.data.get("date", date.today().isoformat())
@@ -246,7 +246,7 @@ def chatbot_ask(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def log_meal_from_image(request):
     """
     Accepts a base64 encoded image, identifies the food via Vision API,

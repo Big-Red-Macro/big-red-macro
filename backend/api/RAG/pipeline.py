@@ -76,7 +76,7 @@ def generate_rag_meal_plan(profile: UserProfile, target_date: str):
 
     # LangChain + Gemini
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash",
         temperature=0.2,
     )
     
@@ -140,7 +140,7 @@ def chatbot_query(question: str, target_date: str):
     context_str = "\n".join(context_lines)
     
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash",
         temperature=0.4,
     )
     

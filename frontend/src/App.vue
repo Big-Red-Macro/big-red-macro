@@ -37,22 +37,6 @@
       
       <!-- User Info + Logout at bottom -->
       <div class="p-4 lg:p-6 mb-4 space-y-3">
-        <!-- User greeting -->
-        <div v-if="auth.isAuthenticated && auth.userName" class="flex items-center gap-3 px-3 py-2">
-          <img v-if="auth.userPicture" :src="auth.userPicture" class="w-8 h-8 rounded-full ring-2 ring-cornell-red/40 shrink-0" referrerpolicy="no-referrer" alt="avatar" />
-          <div v-else class="w-8 h-8 rounded-full bg-gradient-to-br from-cornell-red to-cornell-800 flex items-center justify-center text-xs font-bold text-white shrink-0">
-            {{ auth.userName.charAt(0).toUpperCase() }}
-          </div>
-          <div class="hidden lg:block overflow-hidden">
-            <p class="text-sm font-semibold text-white truncate">{{ auth.userName }}</p>
-            <p class="text-[11px] text-slate-500 truncate">{{ auth.userEmail }}</p>
-          </div>
-        </div>
-
-        <button v-if="auth.isAuthenticated" @click="doLogout" class="flex items-center gap-3 px-3 py-3 rounded-xl transition-all bg-transparent group w-full justify-center lg:justify-start text-red-400 hover:text-red-300 hover:bg-red-500/10">
-          <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-          <span class="hidden lg:block font-medium">Logout</span>
-        </button>
       </div>
     </aside>
 
