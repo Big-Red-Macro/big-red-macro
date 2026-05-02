@@ -4,7 +4,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from celery.schedules import crontab
 
-load_dotenv()
+load_dotenv(override=True)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -88,6 +88,11 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = os.getenv(
     "CORS_ALLOWED_ORIGINS", "http://localhost:5173"
 ).split(",")
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
+GOOGLE_CALENDAR_REDIRECT_URI = os.getenv(
+    "GOOGLE_CALENDAR_REDIRECT_URI",
+    "http://localhost:5173/calendar-callback",
+)
 
 STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

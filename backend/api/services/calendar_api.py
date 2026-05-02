@@ -12,6 +12,12 @@ SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "mock_client_id")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "mock_client_secret")
 
+DEFAULT_FREE_TIME_BLOCKS = [
+    {"start": "08:00", "end": "10:00", "duration_minutes": 120, "source": "fallback"},
+    {"start": "12:00", "end": "14:00", "duration_minutes": 120, "source": "fallback"},
+    {"start": "17:30", "end": "20:00", "duration_minutes": 150, "source": "fallback"},
+]
+
 def get_client_config():
     return {
         "web": {
@@ -70,10 +76,7 @@ def get_free_time_blocks(token_dict: dict, day_date: datetime.date = None):
     """
     if not token_dict:
         # Mock gap data if no token provides
-        return [
-            {"start": "11:30", "end": "13:00", "duration_minutes": 90},
-            {"start": "17:00", "end": "19:30", "duration_minutes": 150}
-        ]
+        return DEFAULT_FREE_TIME_BLOCKS
     
     try:
         creds = Credentials(**token_dict)
@@ -149,4 +152,4 @@ def get_free_time_blocks(token_dict: dict, day_date: datetime.date = None):
 
     except Exception as e:
         logger.error(f"Failed to fetch calendar events: {e}")
-        return []
+        return DEFAULT_FREE_TIME_BLOCKS

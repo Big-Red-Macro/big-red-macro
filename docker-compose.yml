@@ -24,6 +24,9 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/bigredmacro
       - REDIS_URL=redis://redis:6379/0
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALENDAR_REDIRECT_URI=${GOOGLE_CALENDAR_REDIRECT_URI:-http://localhost:5173/calendar-callback}
     depends_on:
       - mongo
       - redis
@@ -38,6 +41,9 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/bigredmacro
       - REDIS_URL=redis://redis:6379/0
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALENDAR_REDIRECT_URI=${GOOGLE_CALENDAR_REDIRECT_URI:-http://localhost:5173/calendar-callback}
     depends_on:
       - mongo
       - redis
@@ -53,6 +59,7 @@ services:
     environment:
       - VITE_API_BASE=/api
       - VITE_MAPBOX_TOKEN=${MAPBOX_ACCESS_TOKEN}
+      - VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - PROXY_TARGET=http://backend:8000
 
 volumes:

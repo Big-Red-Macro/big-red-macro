@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from typing import List
-from datetime import date
+from datetime import date, datetime
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -23,14 +23,247 @@ class DailyItinerary(BaseModel):
     meals: List[MealSuggestion] = Field(description="Suggested meals for the day")
     daily_summary: str = Field(description="A brief summary or encouragement for the user's day")
 
+PERIOD_LABELS = {
+    "breakfast": "Breakfast",
+    "brunch": "Brunch",
+    "lunch": "Lunch",
+    "dinner": "Dinner",
+}
+
+PERIOD_FALLBACK_TIMES = {
+    "breakfast": "8:30 AM",
+    "brunch": "11:00 AM",
+    "lunch": "12:30 PM",
+    "dinner": "6:15 PM",
+}
+
+GENERIC_PERIOD_PLANS = {
+    "breakfast": {
+        "dining_hall_name": "Morrison Dining",
+        "items": ["Eggs or tofu scramble", "Oatmeal with fruit", "Greek yogurt", "Coffee or water"],
+        "macros": {"calories": 620, "protein_g": 38, "carbs_g": 72, "fat_g": 18},
+    },
+    "lunch": {
+        "dining_hall_name": "Okenshields",
+        "items": ["Lean protein entree", "Rice or roasted potatoes", "Mixed vegetables", "Side salad"],
+        "macros": {"calories": 760, "protein_g": 48, "carbs_g": 88, "fat_g": 22},
+    },
+    "dinner": {
+        "dining_hall_name": "Becker House Dining Room",
+        "items": ["Grilled protein option", "Whole-grain or pasta side", "Vegetable side", "Fruit"],
+        "macros": {"calories": 820, "protein_g": 52, "carbs_g": 92, "fat_g": 26},
+    },
+}
+
+
+def _macro_dict(macros) -> dict:
+    if not macros:
+        return {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}
+    return {
+        "calories": round(macros.calories or 0),
+        "protein_g": round(macros.protein_g or 0, 1),
+        "carbs_g": round(macros.carbs_g or 0, 1),
+        "fat_g": round(macros.fat_g or 0, 1),
+    }
+
+
+def _sum_macros(items: list) -> dict:
+    total = {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}
+    for item in items:
+        macros = _macro_dict(getattr(item, "macros", None))
+        for key in total:
+            total[key] += macros[key]
+    return {key: round(value, 1) for key, value in total.items()}
+
+
+def _item_allowed(item, profile: UserProfile) -> bool:
+    allergens = {a.lower() for a in (profile.allergens or [])}
+    item_allergens = {a.lower() for a in (item.allergens or [])}
+    if allergens & item_allergens:
+        return False
+
+    restrictions = {r.lower() for r in (profile.dietary_restrictions or [])}
+    if "vegan" in restrictions and not item.is_vegan:
+        return False
+    if "vegetarian" in restrictions and not item.is_vegetarian:
+        return False
+    if "halal" in restrictions and not item.is_halal:
+        return False
+    if "gluten_free" in restrictions and not item.is_gluten_free:
+        return False
+    return True
+
+
+def _item_score(item, favorites: set) -> float:
+    macros = _macro_dict(getattr(item, "macros", None))
+    score = macros["protein_g"] * 4 + macros["calories"] / 120
+    if getattr(item, "healthy", False):
+        score += 8
+    if item.name.lower() in favorites:
+        score += 30
+    return score
+
+
+def _period_for_gap(gap: dict) -> str:
+    start = str(gap.get("start", "12:00"))[:5]
+    try:
+        hour = int(start.split(":")[0])
+    except (TypeError, ValueError):
+        return "lunch"
+    if hour < 11:
+        return "breakfast"
+    if hour < 15:
+        return "lunch"
+    return "dinner"
+
+
+def _format_gap_time(gap: dict, period: str) -> str:
+    raw_start = gap.get("start")
+    if not raw_start:
+        return PERIOD_FALLBACK_TIMES.get(period, "12:00 PM")
+    try:
+        return datetime.strptime(str(raw_start)[:5], "%H:%M").strftime("%-I:%M %p")
+    except ValueError:
+        return PERIOD_FALLBACK_TIMES.get(period, "12:00 PM")
+
+
+def _periods_from_gaps(gaps: List[dict]) -> list:
+    periods = []
+    for gap in gaps or []:
+        period = _period_for_gap(gap)
+        if period not in periods:
+            periods.append(period)
+    for period in ["breakfast", "lunch", "dinner"]:
+        if period not in periods:
+            periods.append(period)
+    return periods[:3]
+
+
+def _menus_for_period(target_date: str, period: str) -> tuple[list, str]:
+    periods_to_try = [period]
+    if period == "breakfast":
+        periods_to_try.append("brunch")
+
+    for period_name in periods_to_try:
+        menus = list(DailyMenu.objects(date=target_date, meal_period=period_name))
+        if menus:
+            return menus, target_date
+
+    for period_name in periods_to_try:
+        latest_menu = DailyMenu.objects(meal_period=period_name).order_by("-date").first()
+        if latest_menu:
+            menus = list(DailyMenu.objects(date=latest_menu.date, meal_period=period_name))
+            return menus, latest_menu.date
+
+    latest_menu = DailyMenu.objects.order_by("-date").first()
+    if latest_menu:
+        menus = list(DailyMenu.objects(date=latest_menu.date))
+        return menus, latest_menu.date
+
+    return [], target_date
+
+
+def _generic_meal(period: str, gap: dict) -> dict:
+    plan = GENERIC_PERIOD_PLANS.get(period, GENERIC_PERIOD_PLANS["lunch"])
+    schedule_window = ""
+    if gap.get("start") and gap.get("end"):
+        schedule_window = f" during your {gap['start']}-{gap['end']} free block"
+
+    return {
+        "meal_time": _format_gap_time(gap, period),
+        "meal_period": PERIOD_LABELS.get(period, period.title()),
+        "dining_hall_name": plan["dining_hall_name"],
+        "suggested_items": plan["items"],
+        "estimated_macros": plan["macros"],
+        "reasoning": (
+            f"This is a balanced Cornell dining stop{schedule_window}. "
+            "It prioritizes a protein source, steady carbs, produce, and enough calories to carry you to the next meal."
+        ),
+    }
+
+
+def _fallback_itinerary(profile: UserProfile, gaps: List[dict], target_date: str, note: str = "") -> dict:
+    favorites = {item.lower() for item in (profile.favorite_meals or [])}
+    meals = []
+    menu_dates_used = set()
+
+    for period in _periods_from_gaps(gaps):
+        gap = next((g for g in (gaps or []) if _period_for_gap(g) == period), {})
+        period_menus, menu_date = _menus_for_period(target_date, period)
+        if not period_menus:
+            meals.append(_generic_meal(period, gap))
+            continue
+        menu_dates_used.add(menu_date)
+
+        best_menu = None
+        best_items = []
+        for menu in period_menus:
+            candidates = [
+                item for item in (menu.items or [])
+                if _item_allowed(item, profile)
+            ]
+            candidates_with_macros = [item for item in candidates if item.macros]
+            if candidates_with_macros:
+                candidates = candidates_with_macros
+            candidates = sorted(candidates, key=lambda item: _item_score(item, favorites), reverse=True)
+            selected = candidates[:4]
+            if len(selected) > len(best_items):
+                best_menu = menu
+                best_items = selected
+
+        if not best_menu or not best_items:
+            meals.append(_generic_meal(period, gap))
+            continue
+
+        schedule_window = ""
+        if gap.get("start") and gap.get("end"):
+            schedule_window = f" during your {gap['start']}-{gap['end']} free block"
+
+        hall_name = best_menu.dining_hall.name if best_menu.dining_hall else "Cornell Dining"
+        meals.append({
+            "meal_time": _format_gap_time(gap, period),
+            "meal_period": PERIOD_LABELS.get(period, period.title()),
+            "dining_hall_name": hall_name,
+            "suggested_items": [item.name for item in best_items],
+            "estimated_macros": _sum_macros(best_items),
+            "reasoning": (
+                f"{hall_name} has the strongest {PERIOD_LABELS.get(period, period)} options"
+                f"{schedule_window}, with a protein-forward mix that respects your saved preferences."
+            ),
+        })
+
+    if any(gap.get("source") == "fallback" for gap in (gaps or [])):
+        summary = "Built from today's Cornell Dining menus using default meal windows because Google Calendar events could not be read."
+    else:
+        summary = "Built from your free calendar blocks and today's Cornell Dining menus."
+    if menu_dates_used and (menu_dates_used != {target_date}):
+        latest_date = sorted(menu_dates_used)[-1]
+        summary = f"Built from default meal windows and the latest cached Cornell Dining menus ({latest_date})."
+    if not menu_dates_used:
+        summary = "Built from default meal windows and balanced Cornell dining recommendations."
+    if note:
+        summary += " AI planning was unavailable, so this itinerary uses the local fallback planner."
+
+    return {
+        "itinerary_date": target_date,
+        "meals": meals,
+        "daily_summary": summary,
+    }
+
+
 def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: str) -> dict:
     """
     Generate an AI-powered meal plan using Gemini 1.5 Flash and LangChain.
     """
     # Load API key from environment (set in .env)
-    user_key = os.getenv("GEMINI_API_KEY")
+    user_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not user_key:
-        raise ValueError("GEMINI_API_KEY is not set. Add it to your .env file.")
+        return _fallback_itinerary(
+            profile,
+            gaps,
+            target_date,
+            "GOOGLE_API_KEY/GEMINI_API_KEY is not set.",
+        )
     os.environ["GOOGLE_API_KEY"] = user_key
     
     menus = DailyMenu.objects(date=target_date)
@@ -131,4 +364,4 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
         return res.model_dump()
     except Exception as e:
         logger.error(f"Failed to generate RAG meal plan: {e}")
-        return {"error": str(e)}
+        return _fallback_itinerary(profile, gaps, target_date, str(e))

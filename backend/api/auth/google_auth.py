@@ -28,6 +28,12 @@ def google_login(request):
             {"detail": "Google credential is required."},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    if not GOOGLE_CLIENT_ID:
+        logger.error("GOOGLE_CLIENT_ID is not configured.")
+        return Response(
+            {"detail": "Google sign-in is not configured on the server."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
     try:
         idinfo = id_token.verify_oauth2_token(

@@ -53,6 +53,8 @@ export const useMainStore = defineStore('main', () => {
   // Generate Meal Plan
   const generateMealPlan = async (date = null) => {
     isLoading.value = true
+    currentError.value = null
+    itinerary.value = null
     try {
       const body = { google_auth_token: tokenDict.value || {} }
       if (date) body.date = date
@@ -60,10 +62,12 @@ export const useMainStore = defineStore('main', () => {
       if (res.data.ai_plan && !res.data.ai_plan.error) {
         itinerary.value = res.data.ai_plan
       } else {
+        itinerary.value = null
         currentError.value = res.data.ai_plan?.error || "AI could not generate plan."
       }
     } catch (e) {
       console.error(e)
+      itinerary.value = null
       currentError.value = "An error occurred while generating the plan."
     } finally {
       isLoading.value = false

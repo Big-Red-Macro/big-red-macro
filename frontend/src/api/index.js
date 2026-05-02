@@ -5,7 +5,18 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+const publicAuthPaths = new Set([
+  '/auth/login/',
+  '/auth/google/',
+  '/auth/refresh/',
+])
+
 api.interceptors.request.use((config) => {
+  if (publicAuthPaths.has(config.url)) {
+    delete config.headers.Authorization
+    return config
+  }
+
   const token = localStorage.getItem('access_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`

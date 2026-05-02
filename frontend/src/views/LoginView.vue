@@ -16,7 +16,15 @@
 
         <!-- Google Sign In -->
         <div class="w-full flex justify-center">
-          <GoogleLogin :callback="onGoogleLogin" />
+          <GoogleLogin
+            v-if="googleClientId"
+            :client-id="googleClientId"
+            :callback="onGoogleLogin"
+            :error="onGoogleError"
+          />
+          <p v-else class="text-sm font-medium text-red-400">
+            Google sign-in is not configured.
+          </p>
         </div>
 
         <p v-if="error" class="mt-4 text-xs font-medium text-red-400">{{ error }}</p>
@@ -35,13 +43,19 @@ import { getProfile } from '@/api'
 const router = useRouter()
 const auth = useAuthStore()
 const error = ref('')
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 async function onGoogleLogin(response) {
+  if (!response?.credential) {
+    error.value = 'Google did not return a sign-in credential.'
+    return
+  }
+
   try {
     await auth.loginGoogle(response.credential)
   } catch (e) {
     console.error(e)
-    error.value = 'Sign in failed. Please try again.'
+    error.value = e.response?.data?.detail || 'Sign in failed. Please try again.'
     return
   }
   try {
@@ -55,5 +69,10 @@ async function onGoogleLogin(response) {
     console.error(e)
     router.push('/onboarding')
   }
+}
+
+function onGoogleError(e) {
+  console.error('Google sign-in failed:', e)
+  error.value = 'Google sign-in was cancelled or failed.'
 }
 </script>

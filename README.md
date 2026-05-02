@@ -27,6 +27,7 @@
 
 - **Docker & Docker Compose** — the recommended way to run everything.
 - A **Google API Key** with the Gemini API enabled (required for the Vision pipeline and AI meal planner).
+- A **Google OAuth 2.0 Web client ID** for Google sign-in. Add `http://localhost:5173` to the client's authorized JavaScript origins in Google Cloud.
 
 ### 1. Environment Variables
 
@@ -42,6 +43,9 @@ Then open `backend/.env` and configure:
 |---|---|---|
 | `SECRET_KEY` | Django signing key | Generate one: `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
 | `GOOGLE_API_KEY` | Powers the Vision pipeline (Gemini) + Google Calendar integration | Go to [Google AI Studio](https://aistudio.google.com/apikey) → Create an API key. Make sure the Gemini API is enabled. |
+| `GOOGLE_CLIENT_ID` | Verifies Google sign-in credentials on the backend and configures the frontend sign-in button | Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID → Web application. Add `http://localhost:5173` under Authorized JavaScript origins. |
+| `GOOGLE_CLIENT_SECRET` | Exchanges Google Calendar OAuth codes for calendar tokens | Copy it from the same Google OAuth Web client. |
+| `GOOGLE_CALENDAR_REDIRECT_URI` | Calendar OAuth callback URL sent to Google | Default: `http://localhost:5173/calendar-callback`. Add this exact URL under Authorized redirect URIs for the same OAuth client. |
 | `MAPBOX_ACCESS_TOKEN` | Campus map and walking directions | Go to [Mapbox](https://account.mapbox.com/access-tokens/) → Create a token (the default public token works). |
 | `MONGODB_URI` | MongoDB connection string | Defaults to `mongodb://localhost:27017/bigredmacro`. Docker handles this automatically. |
 | `REDIS_URL` | Redis connection for Celery task queue | Defaults to `redis://localhost:6379/0`. Docker handles this automatically. |
@@ -55,6 +59,9 @@ Docker Compose spins up **4 containers**: MongoDB, Redis, Django Backend, and Ce
 ```bash
 # Set your Google API key so docker-compose can pass it to containers
 export GOOGLE_API_KEY="your-key-here"
+export GOOGLE_CLIENT_ID="your-oauth-client-id.apps.googleusercontent.com"
+export GOOGLE_CLIENT_SECRET="your-oauth-client-secret"
+export GOOGLE_CALENDAR_REDIRECT_URI="http://localhost:5173/calendar-callback"
 
 # Build and start all services
 docker compose up --build -d

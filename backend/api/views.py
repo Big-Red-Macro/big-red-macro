@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.core.cache import cache
+from django.conf import settings
 
 from api.models import DailyMenu, DiningHall, UserProfile, WaitTimeSample
 from api.serializers import (
@@ -215,12 +216,15 @@ def refresh_menus(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def calendar_connect(request):
-    redirect_uri = "http://localhost:5173/calendar-callback"
+    redirect_uri = settings.GOOGLE_CALENDAR_REDIRECT_URI
     url, state, code_verifier = get_authorization_url(redirect_uri)
     if url:
         if code_verifier and state:
             cache.set(f"pkce_{state}", code_verifier, timeout=600)
-        return Response({"auth_url": url}, status=status.HTTP_200_OK)
+        return Response(
+            {"auth_url": url, "redirect_uri": redirect_uri},
+            status=status.HTTP_200_OK,
+        )
     return Response({"error": "Failed to generate auth url"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET', 'POST'])
@@ -233,7 +237,7 @@ def calendar_callback(request):
     
     code_verifier = cache.get(f"pkce_{state}") if state else None
     
-    redirect_uri = "http://localhost:5173/calendar-callback"
+    redirect_uri = settings.GOOGLE_CALENDAR_REDIRECT_URI
     token_dict = exchange_code(code, redirect_uri, code_verifier)
     if not token_dict:
         return Response({"error": "Failed to exchange token"}, status=status.HTTP_400_BAD_REQUEST)

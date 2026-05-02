@@ -27,7 +27,17 @@
         </div>
 
         <div class="flex justify-center mb-6">
-          <GoogleLogin :callback="onGoogleSuccess" :error="onGoogleError" prompt auto-login />
+          <GoogleLogin
+            v-if="googleClientId"
+            :client-id="googleClientId"
+            :callback="onGoogleSuccess"
+            :error="onGoogleError"
+            prompt
+            auto-login
+          />
+          <p v-else class="text-sm text-red-400 text-center bg-red-500/10 rounded-xl px-4 py-2">
+            Google sign-in is not configured.
+          </p>
         </div>
 
         <p v-if="errorMsg" class="text-sm text-red-400 text-center bg-red-500/10 rounded-xl px-4 py-2 mt-4">{{ errorMsg }}</p>
@@ -61,8 +71,14 @@ const router = useRouter()
 
 const loading = ref(false)
 const errorMsg = ref('')
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 async function onGoogleSuccess(response) {
+  if (!response?.credential) {
+    errorMsg.value = 'Google did not return a sign-in credential.'
+    return
+  }
+
   loading.value = true
   errorMsg.value = ''
   try {
@@ -70,7 +86,7 @@ async function onGoogleSuccess(response) {
     router.push('/')
   } catch (e) {
     console.error('Google login failed:', e)
-    errorMsg.value = 'Sign-in failed. Please try again.'
+    errorMsg.value = e.response?.data?.detail || 'Sign-in failed. Please try again.'
   } finally {
     loading.value = false
   }
