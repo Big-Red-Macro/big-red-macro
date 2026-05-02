@@ -255,6 +255,13 @@
 
       <!-- Menu periods -->
       <div v-else class="space-y-12">
+        <div
+          v-if="menuMeta?.is_fallback"
+          class="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-5 py-4 text-sm font-semibold text-amber-100"
+        >
+          Cornell has not published a {{ selectedDateKey === 'tomorrow' ? 'tomorrow' : 'today' }} menu for {{ selectedHall.name }} in the local cache yet, so this is the latest saved menu from {{ formatMenuDate(menuMeta.source_date) }}.
+        </div>
+
         <div v-for="menu in menus" :key="menu.meal_period">
           <h3 class="flex items-center gap-4 mb-6">
             <span class="text-sm font-black text-slate-300 uppercase tracking-[0.2em]">{{ menu.meal_period }}</span>
@@ -339,6 +346,7 @@ const loadingHalls = ref(false)
 const hallFavorites = ref(new Set())
 const selectedHall = ref(null)
 const menus = ref([])
+const menuMeta = ref(null)
 const loadingMenu = ref(false)
 const favoriteMeals = ref(new Set())
 const toast = ref({ visible: false, message: '' })
@@ -428,6 +436,12 @@ function getDateStr(key) {
   const d = new Date()
   if (key === 'tomorrow') d.setDate(d.getDate() + 1)
   return d.toISOString().split('T')[0]
+}
+
+function formatMenuDate(value) {
+  if (!value) return 'the latest cached date'
+  const date = new Date(`${value}T12:00:00`)
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function setDate(key) {
@@ -534,9 +548,20 @@ onMounted(async () => {
 async function loadMenu(hall, dateStr) {
   loadingMenu.value = true
   menus.value = []
+  menuMeta.value = null
   try {
     const res = await getDiningHallMenu(hall.id, dateStr)
-    menus.value = res.data
+    if (Array.isArray(res.data)) {
+      menus.value = res.data
+    } else {
+      menus.value = res.data.menus || []
+      menuMeta.value = {
+        requested_date: res.data.requested_date,
+        source_date: res.data.source_date,
+        source: res.data.source,
+        is_fallback: !!res.data.is_fallback,
+      }
+    }
   } catch (e) {
     console.error(e)
   } finally {

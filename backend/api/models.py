@@ -75,6 +75,7 @@ class DailyMenu(Document):
         choices=["breakfast", "lunch", "dinner", "brunch"], required=True
     )
     items = ListField(EmbeddedDocumentField(MenuItem))
+    source = StringField(default="unknown")
     fetched_at = DateTimeField(default=datetime.utcnow)
 
 

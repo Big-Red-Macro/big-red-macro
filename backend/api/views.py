@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime
 
 from rest_framework import status
@@ -20,6 +21,15 @@ from api.services.meal_planner import MealPlannerService
 from api.services.wait_time import WaitTimeService
 from api.services.calendar_api import get_authorization_url, exchange_code, get_free_time_blocks
 from api.RAG.pipeline import generate_rag_meal_plan
+
+logger = logging.getLogger(__name__)
+
+MEAL_PERIOD_ORDER = {
+    "breakfast": 0,
+    "brunch": 1,
+    "lunch": 2,
+    "dinner": 3,
+}
 
 
 def _today_str():
@@ -67,6 +77,44 @@ def _nutrition_payload(log):
     }
 
 
+def _serialize_menu_queryset(qs, requested_date, source_date):
+    result = []
+    for menu in sorted(qs, key=lambda m: MEAL_PERIOD_ORDER.get(m.meal_period, 99)):
+        result.append(
+            {
+                "meal_period": menu.meal_period,
+                "items": MenuItemSerializer(menu.items, many=True).data,
+                "date": menu.date,
+                "requested_date": requested_date,
+                "source_date": source_date,
+                "is_fallback": menu.date != requested_date,
+            }
+        )
+    return result
+
+
+def _hall_menu_queryset(hall, target_date, period=None):
+    qs = DailyMenu.objects(dining_hall=hall, date=target_date, source="cornell_dining_api")
+    if period:
+        qs = qs.filter(meal_period=period)
+    return list(qs)
+
+
+def _latest_hall_menu_queryset(hall, period=None):
+    latest_qs = DailyMenu.objects(dining_hall=hall, source="cornell_dining_api")
+    if period:
+        latest_qs = latest_qs.filter(meal_period=period)
+
+    latest_menu = latest_qs.order_by("-date").first()
+    if not latest_menu:
+        return [], None
+
+    qs = DailyMenu.objects(dining_hall=hall, date=latest_menu.date, source="cornell_dining_api")
+    if period:
+        qs = qs.filter(meal_period=period)
+    return list(qs), latest_menu.date
+
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -80,22 +128,41 @@ def dining_halls(request):
 @permission_classes([IsAuthenticated])
 def dining_hall_menu(request, hall_id: str):
     """Get today's (or a specific date's) menu for a dining hall."""
-    target_date = request.query_params.get("date", date.today().isoformat())
+    target_date = _valid_date_or_today(request.query_params.get("date"))
     period = request.query_params.get("period")
+    hall = DiningHall.objects(id=hall_id).first()
+    if not hall:
+        return Response({"detail": "Dining hall not found."}, status=404)
 
-    qs = DailyMenu.objects(dining_hall=hall_id, date=target_date)
-    if period:
-        qs = qs.filter(meal_period=period)
+    menus = _hall_menu_queryset(hall, target_date, period)
+    source_date = target_date
+    source = "exact"
 
-    result = []
-    for menu in qs:
-        result.append(
-            {
-                "meal_period": menu.meal_period,
-                "items": MenuItemSerializer(menu.items, many=True).data,
-            }
-        )
-    return Response(result)
+    if not menus:
+        refresh_cache_key = f"dining_menu_refresh_attempted:{target_date}"
+        if not cache.get(refresh_cache_key):
+            try:
+                CornellDiningClient().ingest_all_menus(date.fromisoformat(target_date))
+                menus = _hall_menu_queryset(hall, target_date, period)
+            except Exception as exc:
+                logger.warning("Could not refresh Cornell Dining menus for %s: %s", target_date, exc)
+            finally:
+                cache.set(refresh_cache_key, True, timeout=15 * 60)
+
+    if not menus:
+        menus, source_date = _latest_hall_menu_queryset(hall, period)
+        if menus:
+            source = "latest_cached"
+
+    return Response(
+        {
+            "requested_date": target_date,
+            "source_date": source_date,
+            "source": source if menus else "none",
+            "is_fallback": bool(menus and source_date != target_date),
+            "menus": _serialize_menu_queryset(menus, target_date, source_date),
+        }
+    )
 
 
 # User Profile

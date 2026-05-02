@@ -284,26 +284,26 @@ def seed():
             if "breakfast" in hours:
                 items = [make_item(d) for d in random.sample(BREAKFAST_ITEMS, min(7, len(BREAKFAST_ITEMS)))]
                 DailyMenu.objects(dining_hall=hall, date=today, meal_period="breakfast").update_one(
-                    set__items=items, set__fetched_at=datetime.now(timezone.utc), upsert=True
+                    set__items=items, set__source="seed_demo", set__fetched_at=datetime.now(timezone.utc), upsert=True
                 )
             
             if "lunch" in hours:
                 items = [make_item(d) for d in random.sample(LUNCH_ITEMS, min(9, len(LUNCH_ITEMS)))]
                 DailyMenu.objects(dining_hall=hall, date=today, meal_period="lunch").update_one(
-                    set__items=items, set__fetched_at=datetime.now(timezone.utc), upsert=True
+                    set__items=items, set__source="seed_demo", set__fetched_at=datetime.now(timezone.utc), upsert=True
                 )
             
             if "dinner" in hours:
                 items = [make_item(d) for d in random.sample(DINNER_ITEMS, min(9, len(DINNER_ITEMS)))]
                 DailyMenu.objects(dining_hall=hall, date=today, meal_period="dinner").update_one(
-                    set__items=items, set__fetched_at=datetime.now(timezone.utc), upsert=True
+                    set__items=items, set__source="seed_demo", set__fetched_at=datetime.now(timezone.utc), upsert=True
                 )
         
         # Cafes get lunch items
         elif hall.dining_type == "cafe":
             items = [make_item(d) for d in random.sample(LUNCH_ITEMS, min(6, len(LUNCH_ITEMS)))]
             DailyMenu.objects(dining_hall=hall, date=today, meal_period="lunch").update_one(
-                set__items=items, set__fetched_at=datetime.now(timezone.utc), upsert=True
+                set__items=items, set__source="seed_demo", set__fetched_at=datetime.now(timezone.utc), upsert=True
             )
 
     print(f"\nDone! {DiningHall.objects.count()} halls, {DailyMenu.objects.count()} menu periods seeded.")

@@ -217,19 +217,19 @@ def _menus_for_period(target_date: str, period: str) -> tuple[list, str]:
         periods_to_try.append("brunch")
 
     for period_name in periods_to_try:
-        menus = list(DailyMenu.objects(date=target_date, meal_period=period_name))
+        menus = list(DailyMenu.objects(date=target_date, meal_period=period_name, source="cornell_dining_api"))
         if menus:
             return menus, target_date
 
     for period_name in periods_to_try:
-        latest_menu = DailyMenu.objects(meal_period=period_name).order_by("-date").first()
+        latest_menu = DailyMenu.objects(meal_period=period_name, source="cornell_dining_api").order_by("-date").first()
         if latest_menu:
-            menus = list(DailyMenu.objects(date=latest_menu.date, meal_period=period_name))
+            menus = list(DailyMenu.objects(date=latest_menu.date, meal_period=period_name, source="cornell_dining_api"))
             return menus, latest_menu.date
 
-    latest_menu = DailyMenu.objects.order_by("-date").first()
+    latest_menu = DailyMenu.objects(source="cornell_dining_api").order_by("-date").first()
     if latest_menu:
-        menus = list(DailyMenu.objects(date=latest_menu.date))
+        menus = list(DailyMenu.objects(date=latest_menu.date, source="cornell_dining_api"))
         return menus, latest_menu.date
 
     return [], target_date
@@ -368,7 +368,7 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
         )
     os.environ["GOOGLE_API_KEY"] = user_key
     
-    menus = DailyMenu.objects(date=target_date)
+    menus = DailyMenu.objects(date=target_date, source="cornell_dining_api")
     menu_context = []
     
     for m in menus:

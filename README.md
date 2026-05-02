@@ -49,7 +49,7 @@ Then open `backend/.env` and configure:
 | `MAPBOX_ACCESS_TOKEN` | Campus map and walking directions | Go to [Mapbox](https://account.mapbox.com/access-tokens/) → Create a token (the default public token works). |
 | `MONGODB_URI` | MongoDB connection string | Defaults to `mongodb://localhost:27017/bigredmacro`. Docker handles this automatically. |
 | `REDIS_URL` | Redis connection for Celery task queue | Defaults to `redis://localhost:6379/0`. Docker handles this automatically. |
-| `CORNELL_DINING_API_BASE` | Cornell Dining API base URL | Default: `https://now.dining.cornell.edu/api/1.0` |
+| `CORNELL_DINING_API_BASE` | Cornell Dining API base URL | Default: `https://admin-now.dining.cornell.edu/api/1.0` |
 | `CORS_ALLOWED_ORIGINS` | Allowed frontend origins | Default: `http://localhost:5173` |
 
 ### 2. Running with Docker (Recommended)

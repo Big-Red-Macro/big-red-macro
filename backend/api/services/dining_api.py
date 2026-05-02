@@ -67,17 +67,35 @@ _GET_KEYWORDS   = {"mobile payment", "apple pay", "google"}
 
 
 class CornellDiningClient:
-    BASE_URL = settings.CORNELL_DINING_API_BASE  # https://admin-now.dining.cornell.edu/api/1.0
+    DEFAULT_BASE_URL = "https://admin-now.dining.cornell.edu/api/1.0"
+    BASE_URL = settings.CORNELL_DINING_API_BASE  # preferred, but can be overridden by .env
+
+    @classmethod
+    def _base_urls(cls) -> list[str]:
+        configured = (cls.BASE_URL or "").rstrip("/")
+        default = cls.DEFAULT_BASE_URL.rstrip("/")
+        return list(dict.fromkeys([configured, default]))
 
     def _get(self, path: str, params: dict = None) -> dict:
-        url = f"{self.BASE_URL}/{path}"
-        try:
-            resp = requests.get(url, params=params, timeout=15)
-            resp.raise_for_status()
-            return resp.json()
-        except requests.RequestException as exc:
-            logger.error("Cornell Dining API request failed [%s]: %s", url, exc)
-            return {}
+        for base_url in self._base_urls():
+            if not base_url:
+                continue
+            url = f"{base_url}/{path}"
+            try:
+                resp = requests.get(url, params=params, timeout=15)
+                resp.raise_for_status()
+                content_type = resp.headers.get("content-type", "")
+                if "json" not in content_type.lower():
+                    logger.warning(
+                        "Cornell Dining API returned non-JSON content from %s (%s); trying next source",
+                        url,
+                        content_type,
+                    )
+                    continue
+                return resp.json()
+            except (requests.RequestException, ValueError) as exc:
+                logger.warning("Cornell Dining API request failed [%s]: %s", url, exc)
+        return {}
 
 
     def get_eateries(self) -> list[dict]:
@@ -274,6 +292,7 @@ class CornellDiningClient:
                             dining_hall=hall, date=date_str, meal_period=p,
                         ).update_one(
                             set__items=items,
+                            set__source="cornell_dining_api",
                             set__fetched_at=datetime.now(timezone.utc),
                             upsert=True,
                         )
@@ -294,6 +313,7 @@ class CornellDiningClient:
                             dining_hall=hall, date=date_str, meal_period=p,
                         ).update_one(
                             set__items=items,
+                            set__source="cornell_dining_api",
                             set__fetched_at=datetime.now(timezone.utc),
                             upsert=True,
                         )
