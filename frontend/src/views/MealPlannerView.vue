@@ -76,6 +76,9 @@
              :plan-generated="true"
              class="animate-in fade-in slide-in-from-bottom-4 duration-500"
            />
+           <div v-if="store.itinerary && store.plannerNotice" class="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-5 text-sm text-amber-100">
+             {{ store.plannerNotice }}
+           </div>
            <div v-else-if="store.isLoading" class="text-center py-12">
              <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-red-500 border-t-transparent mb-4"></div>
              <p class="text-slate-400 animate-pulse">Running RAG via Gemini 2.5 Flash...</p>

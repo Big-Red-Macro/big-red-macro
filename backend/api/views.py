@@ -341,6 +341,13 @@ def calendar_connect(request):
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def calendar_callback(request):
+    oauth_error = request.GET.get('error') or request.data.get('error')
+    if oauth_error:
+        return Response(
+            {"error": oauth_error, "detail": request.GET.get('error_description') or request.data.get('error_description') or "Google Calendar authorization was cancelled or denied."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     code = request.GET.get('code') or request.data.get('code')
     state = request.GET.get('state') or request.data.get('state')
     if not code:

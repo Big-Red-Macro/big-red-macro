@@ -86,6 +86,18 @@ GENERIC_PERIOD_PLANS = {
 }
 
 
+def _ai_error_notice(error_text: str) -> str:
+    normalized = error_text.lower()
+    if "api_key_invalid" in error_text or "api key not valid" in normalized:
+        return "Gemini rejected the configured API key. Update GOOGLE_API_KEY or GEMINI_API_KEY in backend/.env."
+    if "resource_exhausted" in error_text or "prepayment credits are depleted" in normalized or "quota" in normalized:
+        return (
+            "Gemini quota or billing is unavailable for the configured key, so this itinerary "
+            "was generated with the local Cornell planner."
+        )
+    return "Gemini was unavailable, so this itinerary was generated with the local Cornell planner."
+
+
 def _macro_dict(macros) -> dict:
     if not macros:
         return {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}
@@ -471,5 +483,9 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
         })
         return _normalize_ai_itinerary(res.model_dump(), gaps)
     except Exception as e:
-        logger.error(f"Failed to generate RAG meal plan: {e}")
-        return _fallback_itinerary(profile, gaps, target_date, str(e))
+        error_text = str(e)
+        logger.error(f"Failed to generate RAG meal plan: {error_text}")
+        result = _fallback_itinerary(profile, gaps, target_date, error_text)
+        result["ai_error"] = _ai_error_notice(error_text)
+        result["planner_mode"] = "local_fallback"
+        return result

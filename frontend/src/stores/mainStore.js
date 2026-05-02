@@ -9,6 +9,7 @@ export const useMainStore = defineStore('main', () => {
   const tokenDict = ref(null)
   const isLoading = ref(false)
   const currentError = ref(null)
+  const plannerNotice = ref(null)
 
   // Check if calendar already connected via stored profile token
   const checkCalendarStatus = async () => {
@@ -44,7 +45,7 @@ export const useMainStore = defineStore('main', () => {
       isConnectedToCalendar.value = true
     } catch (e) {
       console.error(e)
-      currentError.value = "Failed to authenticate with Google."
+      currentError.value = e.response?.data?.detail || e.response?.data?.error || "Failed to authenticate with Google."
     } finally {
       isLoading.value = false
     }
@@ -54,6 +55,7 @@ export const useMainStore = defineStore('main', () => {
   const generateMealPlan = async (date = null) => {
     isLoading.value = true
     currentError.value = null
+    plannerNotice.value = null
     itinerary.value = null
     try {
       const body = { google_auth_token: tokenDict.value || {} }
@@ -61,6 +63,7 @@ export const useMainStore = defineStore('main', () => {
       const res = await api.post('/meal-plan/generate-ai/', body)
       if (res.data.ai_plan && !res.data.ai_plan.error) {
         itinerary.value = res.data.ai_plan
+        plannerNotice.value = res.data.ai_plan.ai_error || null
       } else {
         itinerary.value = null
         currentError.value = res.data.ai_plan?.error || "AI could not generate plan."
@@ -77,9 +80,11 @@ export const useMainStore = defineStore('main', () => {
   const loadSavedItinerary = async (date = null) => {
     isLoading.value = true
     currentError.value = null
+    plannerNotice.value = null
     try {
       const { data } = await getSavedAIItinerary(date)
       itinerary.value = data.ai_plan || null
+      plannerNotice.value = data.ai_plan?.ai_error || null
       return itinerary.value
     } catch (e) {
       console.error(e)
@@ -113,6 +118,7 @@ export const useMainStore = defineStore('main', () => {
     tokenDict,
     isLoading,
     currentError,
+    plannerNotice,
     checkCalendarStatus,
     getConnectUrl,
     submitCalendarCode,
