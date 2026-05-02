@@ -6,13 +6,14 @@ from datetime import date, datetime
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
-from api.models import UserProfile, DailyMenu
+from api.models import UserProfile, DailyMenu, DiningHall
 
 logger = logging.getLogger(__name__)
 
 # Pydantic models for structured output
 class MealSuggestion(BaseModel):
     meal_time: str = Field(description="The suggested time to eat, e.g., '12:15 PM'")
+    meal_period: str = Field(description="Breakfast, Lunch, Dinner, or Brunch")
     dining_hall_name: str = Field(description="The name of the dining hall")
     suggested_items: List[str] = Field(description="List of specific menu items to eat")
     estimated_macros: dict = Field(description="Estimated macros with keys: calories, protein_g, carbs_g, fat_g")
@@ -28,6 +29,35 @@ PERIOD_LABELS = {
     "brunch": "Brunch",
     "lunch": "Lunch",
     "dinner": "Dinner",
+}
+
+AREA_DEFAULT_HALLS = {
+    "Central": {
+        "breakfast": "Trillium",
+        "brunch": "Okenshields",
+        "lunch": "Okenshields",
+        "dinner": "Okenshields",
+    },
+    "North": {
+        "breakfast": "North Star Dining Room",
+        "brunch": "Robert Purcell Marketplace Eatery",
+        "lunch": "North Star Dining Room",
+        "dinner": "Robert Purcell Marketplace Eatery",
+    },
+    "West": {
+        "breakfast": "Becker House Dining Room",
+        "brunch": "Becker House Dining Room",
+        "lunch": "Becker House Dining Room",
+        "dinner": "Becker House Dining Room",
+    },
+}
+
+GENERIC_HALL_NAMES = {
+    "cornell dining hall",
+    "cornell dining halls",
+    "cornell dining",
+    "dining hall",
+    "campus dining",
 }
 
 PERIOD_FALLBACK_TIMES = {
@@ -139,6 +169,48 @@ def _periods_from_gaps(gaps: List[dict]) -> list:
     return periods[:3]
 
 
+def _preferred_area(gap: dict) -> str:
+    return gap.get("predicted_area") or "Central"
+
+
+def _default_hall_for_gap(period: str, gap: dict) -> str:
+    area = _preferred_area(gap)
+    return AREA_DEFAULT_HALLS.get(area, AREA_DEFAULT_HALLS["Central"]).get(
+        period,
+        AREA_DEFAULT_HALLS.get(area, AREA_DEFAULT_HALLS["Central"])["lunch"],
+    )
+
+
+def _hall_directory() -> str:
+    halls = DiningHall.objects.order_by("campus_area", "name")
+    lines = []
+    for hall in halls:
+        periods = ", ".join(sorted((hall.operating_hours or {}).keys())) or "unknown periods"
+        lines.append(f"- {hall.name} ({hall.campus_area or 'Unknown'} Campus; {periods})")
+    if not lines:
+        return (
+            "- Okenshields (Central Campus; breakfast, lunch, dinner)\n"
+            "- North Star Dining Room (North Campus; breakfast, lunch, dinner)\n"
+            "- Robert Purcell Marketplace Eatery (North Campus; breakfast, lunch, dinner)\n"
+            "- Becker House Dining Room (West Campus; breakfast, lunch, dinner)\n"
+            "- Trillium (Central Campus; breakfast, lunch)"
+        )
+    return "\n".join(lines)
+
+
+def _valid_hall_names() -> set:
+    names = {hall.name for hall in DiningHall.objects.only("name")}
+    if not names:
+        names = {
+            "Okenshields",
+            "North Star Dining Room",
+            "Robert Purcell Marketplace Eatery",
+            "Becker House Dining Room",
+            "Trillium",
+        }
+    return names
+
+
 def _menus_for_period(target_date: str, period: str) -> tuple[list, str]:
     periods_to_try = [period]
     if period == "breakfast":
@@ -165,18 +237,20 @@ def _menus_for_period(target_date: str, period: str) -> tuple[list, str]:
 
 def _generic_meal(period: str, gap: dict) -> dict:
     plan = GENERIC_PERIOD_PLANS.get(period, GENERIC_PERIOD_PLANS["lunch"])
+    hall_name = _default_hall_for_gap(period, gap)
     schedule_window = ""
     if gap.get("start") and gap.get("end"):
         schedule_window = f" during your {gap['start']}-{gap['end']} free block"
+    area_text = f" near {_preferred_area(gap)} Campus"
 
     return {
         "meal_time": _format_gap_time(gap, period),
         "meal_period": PERIOD_LABELS.get(period, period.title()),
-        "dining_hall_name": plan["dining_hall_name"],
+        "dining_hall_name": hall_name or plan["dining_hall_name"],
         "suggested_items": plan["items"],
         "estimated_macros": plan["macros"],
         "reasoning": (
-            f"This is a balanced Cornell dining stop{schedule_window}. "
+            f"This is a balanced Cornell dining stop{area_text}{schedule_window}. "
             "It prioritizes a protein source, steady carbs, produce, and enough calories to carry you to the next meal."
         ),
     }
@@ -197,7 +271,12 @@ def _fallback_itinerary(profile: UserProfile, gaps: List[dict], target_date: str
 
         best_menu = None
         best_items = []
-        for menu in period_menus:
+        preferred_area = _preferred_area(gap).lower()
+        ranked_menus = sorted(
+            period_menus,
+            key=lambda menu: 0 if (menu.dining_hall and (menu.dining_hall.campus_area or "").lower() == preferred_area) else 1,
+        )
+        for menu in ranked_menus:
             candidates = [
                 item for item in (menu.items or [])
                 if _item_allowed(item, profile)
@@ -227,8 +306,8 @@ def _fallback_itinerary(profile: UserProfile, gaps: List[dict], target_date: str
             "suggested_items": [item.name for item in best_items],
             "estimated_macros": _sum_macros(best_items),
             "reasoning": (
-                f"{hall_name} has the strongest {PERIOD_LABELS.get(period, period)} options"
-                f"{schedule_window}, with a protein-forward mix that respects your saved preferences."
+                f"{hall_name} is a strong {PERIOD_LABELS.get(period, period)} choice near "
+                f"{_preferred_area(gap)} Campus{schedule_window}, with a protein-forward mix that respects your saved preferences."
             ),
         })
 
@@ -249,6 +328,29 @@ def _fallback_itinerary(profile: UserProfile, gaps: List[dict], target_date: str
         "meals": meals,
         "daily_summary": summary,
     }
+
+
+def _normalize_ai_itinerary(plan: dict, gaps: List[dict]) -> dict:
+    valid_halls = _valid_hall_names()
+    meals = plan.get("meals") or []
+    for index, meal in enumerate(meals):
+        gap = gaps[index] if index < len(gaps or []) else {}
+        period = (meal.get("meal_period") or _period_for_gap(gap)).lower()
+        if period not in PERIOD_LABELS:
+            period = _period_for_gap(gap)
+
+        hall_name = (meal.get("dining_hall_name") or "").strip()
+        if hall_name.lower() in GENERIC_HALL_NAMES or hall_name not in valid_halls:
+            meal["dining_hall_name"] = _default_hall_for_gap(period, gap)
+
+        meal["meal_period"] = PERIOD_LABELS.get(period, period.title())
+        if not meal.get("reasoning"):
+            meal["reasoning"] = (
+                f"Chosen near {_preferred_area(gap)} Campus based on your schedule location "
+                "and the meal window."
+            )
+    plan["meals"] = meals
+    return plan
 
 
 def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: str) -> dict:
@@ -322,6 +424,7 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
         body_str = "No body metrics provided."
 
     gaps_str = json.dumps(gaps, indent=2)
+    hall_directory = _hall_directory()
 
     # LangChain + Gemini
     llm = ChatGoogleGenerativeAI(
@@ -333,6 +436,9 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
         ("system", "You are an expert AI meal planning assistant for Cornell students. "
                    "You must provide a structured daily meal itinerary based on the user's schedule gaps, "
                    "their macro goals, their dietary restrictions and allergies, and the menus available at Cornell dining halls. "
+                   "Choose a specific Cornell dining location from the provided dining hall directory. "
+                   "Never use generic names like 'Cornell Dining Hall' or 'campus dining'. "
+                   "Use each gap's predicted_area, previous_location, and next_location to pick a nearby hall. "
                    "You must strictly adhere to the user's dietary restrictions (e.g. if they are vegan, ONLY select vegan items). "
                    "Try to incorporate their favorite foods if they are available on the menus today. "
                    "Return the result nicely formatted according to the required schema."),
@@ -341,6 +447,7 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
                   "User's Dietary Preferences & Needs:\n{preferences_str}\n\n"
                   "User's Free Time Blocks (gaps in schedule): {gaps_str}\n"
                   "Target Date: {target_date}\n\n"
+                  "Dining Hall Directory:\n{hall_directory}\n\n"
                   "Available Menus Highlight:\n{context_str}\n\n"
                   "Plan exactly one meal for each major time block (e.g. Breakfast, Lunch, Dinner) "
                   "if the gaps align with typical meal times. Pick specific items from the menus "
@@ -359,9 +466,10 @@ def generate_rag_meal_plan(profile: UserProfile, gaps: List[dict], target_date: 
             "preferences_str": preferences_str,
             "gaps_str": gaps_str,
             "target_date": target_date,
+            "hall_directory": hall_directory,
             "context_str": context_str
         })
-        return res.model_dump()
+        return _normalize_ai_itinerary(res.model_dump(), gaps)
     except Exception as e:
         logger.error(f"Failed to generate RAG meal plan: {e}")
         return _fallback_itinerary(profile, gaps, target_date, str(e))

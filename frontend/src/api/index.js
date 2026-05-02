@@ -45,6 +45,12 @@ export const toggleFavoriteMeal = (meal_name) => api.post('/profile/favorite-mea
 export const generateMealPlan = (date, location) =>
   api.post('/meal-plan/generate/', { date, location })
 export const getMealPlanHistory = () => api.get('/meal-plan/history/')
+export const getSavedAIItinerary = (date) =>
+  api.get('/meal-plan/ai/', { params: { date } })
+export const getNutritionLog = (date) =>
+  api.get('/nutrition-log/', { params: { date } })
+export const updateNutritionLog = (data) =>
+  api.put('/nutrition-log/', data)
 
 // -- Dining Halls --
 export const getDiningHalls = () => api.get('/dining-halls/')

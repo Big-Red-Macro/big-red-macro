@@ -19,7 +19,9 @@ urlpatterns = [
     # Google Calendar & RAG AI
     path("calendar/connect/", views.calendar_connect, name="calendar-connect"),
     path("calendar/callback/", views.calendar_callback, name="calendar-callback"),
+    path("meal-plan/ai/", views.saved_ai_itinerary, name="saved-ai-itinerary"),
     path("meal-plan/generate-ai/", views.generate_ai_meal_plan, name="generate-ai"),
+    path("nutrition-log/", views.nutrition_log, name="nutrition-log"),
     # Vision API
     path("vision/log-meal/", views.log_meal_from_image, name="log-meal-from-image"),
 ]

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from django.core.cache import cache
 from django.conf import settings
 
-from api.models import DailyMenu, DiningHall, UserProfile, WaitTimeSample
+from api.models import AIItinerary, DailyMenu, DailyNutritionLog, DiningHall, UserProfile, WaitTimeSample
 from api.serializers import (
     DiningHallSerializer,
     MealPlanSerializer,
@@ -21,6 +21,50 @@ from api.services.wait_time import WaitTimeService
 from api.services.calendar_api import get_authorization_url, exchange_code, get_free_time_blocks
 from api.RAG.pipeline import generate_rag_meal_plan
 
+
+def _today_str():
+    return date.today().isoformat()
+
+
+def _valid_date_or_today(value):
+    try:
+        return date.fromisoformat(value or _today_str()).isoformat()
+    except ValueError:
+        return _today_str()
+
+
+def _empty_macros():
+    return {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}
+
+
+def _clean_macros(value):
+    value = value or {}
+    return {
+        "calories": float(value.get("calories") or 0),
+        "protein_g": float(value.get("protein_g") or 0),
+        "carbs_g": float(value.get("carbs_g") or 0),
+        "fat_g": float(value.get("fat_g") or 0),
+    }
+
+
+def _nutrition_payload(log):
+    meals = log.meals or {}
+    manual = _clean_macros(log.manual)
+    total = _empty_macros()
+    for meal in meals.values():
+        if meal.get("checked"):
+            macros = _clean_macros(meal.get("macros"))
+            for key in total:
+                total[key] += macros[key]
+    for key in total:
+        total[key] += manual[key]
+        total[key] = round(total[key])
+    return {
+        "date": log.date,
+        "meals": meals,
+        "manual": manual,
+        "totals": total,
+    }
 
 
 
@@ -250,7 +294,7 @@ def calendar_callback(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_ai_meal_plan(request):
-    target_date_str = request.data.get("date", date.today().isoformat())
+    target_date_str = _valid_date_or_today(request.data.get("date"))
     token_dict = request.data.get("google_auth_token", {})
     
     profile = UserProfile.objects(django_user_id=request.user.id).first()
@@ -263,15 +307,86 @@ def generate_ai_meal_plan(request):
     elif not token_dict and profile.google_auth_token:
         token_dict = profile.google_auth_token
 
-    try:
-        target_date = date.fromisoformat(target_date_str)
-    except ValueError:
-        target_date = date.today()
+    target_date = date.fromisoformat(target_date_str)
         
     gaps = get_free_time_blocks(token_dict, target_date)
     
     result = generate_rag_meal_plan(profile, gaps, target_date_str)
+    AIItinerary.objects(
+        django_user_id=request.user.id,
+        date=target_date_str,
+    ).update_one(
+        set__plan=result,
+        set__updated_at=datetime.utcnow(),
+        set_on_insert__generated_at=datetime.utcnow(),
+        upsert=True,
+    )
+    DailyNutritionLog.objects(
+        django_user_id=request.user.id,
+        date=target_date_str,
+    ).update_one(
+        set__meals={},
+        set__manual=_empty_macros(),
+        set__updated_at=datetime.utcnow(),
+        upsert=True,
+    )
     return Response({"ai_plan": result}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def saved_ai_itinerary(request):
+    target_date_str = _valid_date_or_today(request.query_params.get("date"))
+    saved = AIItinerary.objects(
+        django_user_id=request.user.id,
+        date=target_date_str,
+    ).first()
+    if not saved:
+        return Response(
+            {"date": target_date_str, "ai_plan": None},
+            status=status.HTTP_200_OK,
+        )
+    return Response(
+        {
+            "date": target_date_str,
+            "ai_plan": saved.plan,
+            "generated_at": saved.generated_at.isoformat() if saved.generated_at else None,
+            "updated_at": saved.updated_at.isoformat() if saved.updated_at else None,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([IsAuthenticated])
+def nutrition_log(request):
+    target_date_str = _valid_date_or_today(
+        request.query_params.get("date") if request.method == "GET" else request.data.get("date")
+    )
+    log = DailyNutritionLog.objects(
+        django_user_id=request.user.id,
+        date=target_date_str,
+    ).first()
+
+    if request.method == "GET":
+        if not log:
+            log = DailyNutritionLog(
+                django_user_id=request.user.id,
+                date=target_date_str,
+                meals={},
+                manual=_empty_macros(),
+            )
+            log.save()
+        return Response(_nutrition_payload(log), status=status.HTTP_200_OK)
+
+    if not log:
+        log = DailyNutritionLog(django_user_id=request.user.id, date=target_date_str)
+
+    log.meals = request.data.get("meals", {}) or {}
+    log.manual = _clean_macros(request.data.get("manual"))
+    log.updated_at = datetime.utcnow()
+    log.save()
+    return Response(_nutrition_payload(log), status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

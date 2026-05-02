@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import api, { getWaitTimes, getProfile } from '../api'
+import api, { getSavedAIItinerary, getWaitTimes, getProfile } from '../api'
 
 export const useMainStore = defineStore('main', () => {
   const isConnectedToCalendar = ref(false)
@@ -74,6 +74,23 @@ export const useMainStore = defineStore('main', () => {
     }
   }
 
+  const loadSavedItinerary = async (date = null) => {
+    isLoading.value = true
+    currentError.value = null
+    try {
+      const { data } = await getSavedAIItinerary(date)
+      itinerary.value = data.ai_plan || null
+      return itinerary.value
+    } catch (e) {
+      console.error(e)
+      currentError.value = "Failed to load saved itinerary."
+      itinerary.value = null
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   // Wait Times — real API call with mock fallback for demo
   const fetchWaitTimes = async () => {
     try {
@@ -100,6 +117,7 @@ export const useMainStore = defineStore('main', () => {
     getConnectUrl,
     submitCalendarCode,
     generateMealPlan,
+    loadSavedItinerary,
     fetchWaitTimes
   }
 })

@@ -27,29 +27,67 @@
           </div>
 
           <!-- Macro Progress -->
-          <div class="shrink-0 flex gap-6 bg-[#141e30]/80 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
-            <!-- Circular Progress -->
-            <div class="relative w-32 h-32 flex items-center justify-center">
-              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#334155" stroke-width="8" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#B31B1B" stroke-width="8" stroke-linecap="round"
-                  :stroke-dasharray="263.89" :stroke-dashoffset="263.89 * (1 - Math.min(1, caloriesPercent / 100))" class="transition-all duration-1000 ease-out" />
-              </svg>
-              <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span class="text-2xl font-bold text-white leading-none">{{ caloriesConsumed }}</span>
-                <span class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mt-1">/ {{ goalMacros.calories || 2000 }} kcal</span>
+          <div class="shrink-0 bg-[#141e30]/80 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
+            <div class="mb-3 flex items-center justify-between">
+              <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Today Logged</p>
+              <button @click="openMacroEditor" class="rounded-lg border border-white/10 px-2.5 py-1 text-xs font-bold text-slate-300 transition hover:border-white/20 hover:text-white">
+                Edit intake
+              </button>
+            </div>
+
+            <div class="flex gap-6">
+              <!-- Circular Progress -->
+              <div class="relative w-32 h-32 flex items-center justify-center">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#334155" stroke-width="8" />
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#B31B1B" stroke-width="8" stroke-linecap="round"
+                    :stroke-dasharray="263.89" :stroke-dashoffset="263.89 * (1 - Math.min(1, caloriesPercent / 100))" class="transition-all duration-1000 ease-out" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span class="text-2xl font-bold text-white leading-none">{{ caloriesConsumed }}</span>
+                  <span class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mt-1">/ {{ goalMacros.calories || 2000 }} kcal</span>
+                </div>
+              </div>
+
+              <!-- Macro Bars -->
+              <div class="flex flex-col justify-center gap-4 w-40">
+                <div v-for="macro in macroBars" :key="macro.name">
+                  <div class="flex justify-between text-xs mb-1.5">
+                    <span class="text-slate-400 font-medium">{{ macro.name }}</span>
+                    <span class="text-white font-semibold">{{ macro.current }}<span class="text-slate-500 font-normal">/{{ macro.goal }}g</span></span>
+                  </div>
+                  <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-1000 ease-out" :class="macro.color" :style="{ width: `${Math.min(100, macro.percent)}%` }"></div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- Macro Bars -->
-            <div class="flex flex-col justify-center gap-4 w-40">
-              <div v-for="macro in macroBars" :key="macro.name">
-                <div class="flex justify-between text-xs mb-1.5">
-                  <span class="text-slate-400 font-medium">{{ macro.name }}</span>
-                  <span class="text-white font-semibold">{{ macro.current }}<span class="text-slate-500 font-normal">/{{ macro.goal }}g</span></span>
-                </div>
-                <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <div class="h-full rounded-full transition-all duration-1000 ease-out" :class="macro.color" :style="{ width: `${Math.min(100, macro.percent)}%` }"></div>
+            <div v-if="showMacroEditor" class="mt-4 grid grid-cols-2 gap-2">
+              <label v-for="field in manualMacroFields" :key="field.key" class="text-xs font-semibold text-slate-400">
+                {{ field.label }}
+                <input
+                  v-model.number="manualMacros[field.key]"
+                  type="number"
+                  min="0"
+                  class="mt-1 w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white outline-none focus:border-red-300"
+                />
+              </label>
+              <div class="col-span-2 flex justify-end gap-2 pt-1">
+                <button @click="showMacroEditor = false" class="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-bold text-slate-300">Cancel</button>
+                <button @click="saveManualMacros" class="rounded-lg bg-[#B31B1B] px-3 py-1.5 text-xs font-bold text-white">Save adjustment</button>
+              </div>
+              <p class="col-span-2 text-[11px] leading-relaxed text-slate-500">
+                These values are added on top of checked AI planner meals for today.
+              </p>
+            </div>
+
+            <div v-if="nutrition.eatenMeals.length" class="mt-4 border-t border-white/10 pt-3">
+              <p class="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-500">Checked meals</p>
+              <div class="space-y-1">
+                <div v-for="meal in nutrition.eatenMeals" :key="meal.title + meal.dining_hall_name" class="flex justify-between text-xs">
+                  <span class="text-slate-300">{{ meal.title }} · {{ meal.dining_hall_name }}</span>
+                  <span class="font-bold text-white">{{ Math.round(meal.macros.calories) }} kcal</span>
                 </div>
               </div>
             </div>
@@ -290,9 +328,11 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getDiningHalls, getDiningHallMenu, getProfile, toggleFavoriteMeal } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+import { useNutritionStore } from '@/stores/nutrition'
 
 const router = useRouter()
 const auth = useAuthStore()
+const nutrition = useNutritionStore()
 
 const halls = ref([])
 const loadingHalls = ref(false)
@@ -316,7 +356,15 @@ const showRegenBanner = ref(false)
 // Dashboard data
 const profile = ref(null)
 const goalMacros = ref({ calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65 })
-const currentMacros = ref({ calories: 850, protein_g: 60, carbs_g: 110, fat_g: 25 }) // Mock data until we have real daily tracking
+const currentMacros = computed(() => nutrition.consumedMacros)
+const showMacroEditor = ref(false)
+const manualMacros = ref({ calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 })
+const manualMacroFields = [
+  { key: 'calories', label: 'Calories' },
+  { key: 'protein_g', label: 'Protein' },
+  { key: 'carbs_g', label: 'Carbs' },
+  { key: 'fat_g', label: 'Fat' },
+]
 
 const greetingTime = computed(() => {
   const hour = new Date().getHours()
@@ -338,6 +386,30 @@ const macroBars = computed(() => [
   { name: 'Carbs', current: currentMacros.value.carbs_g, goal: goalMacros.value.carbs_g || 200, percent: (currentMacros.value.carbs_g / (goalMacros.value.carbs_g || 200)) * 100, color: 'bg-emerald-500' },
   { name: 'Fat', current: currentMacros.value.fat_g, goal: goalMacros.value.fat_g || 65, percent: (currentMacros.value.fat_g / (goalMacros.value.fat_g || 65)) * 100, color: 'bg-amber-500' },
 ])
+
+function todayKey() {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function openMacroEditor() {
+  const manual = nutrition.activeDay.manual
+  manualMacros.value = {
+    calories: manual.calories || 0,
+    protein_g: manual.protein_g || 0,
+    carbs_g: manual.carbs_g || 0,
+    fat_g: manual.fat_g || 0,
+  }
+  showMacroEditor.value = true
+}
+
+function saveManualMacros() {
+  nutrition.setManualMacros(todayKey(), manualMacros.value)
+  showMacroEditor.value = false
+}
 
 const favoriteHalls = computed(() => {
   return halls.value.filter(h => hallFavorites.value.has(h.id))
@@ -425,6 +497,7 @@ function isOpen(hall) {
 }
 
 onMounted(async () => {
+  await nutrition.setActiveDate(todayKey())
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {

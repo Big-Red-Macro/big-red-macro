@@ -151,6 +151,44 @@ class MealPlan(Document):
     generated_at = DateTimeField(default=datetime.utcnow)
     is_active = BooleanField(default=True)
 
+
+class AIItinerary(Document):
+    """Saved AI planner itinerary for a user/date."""
+
+    meta = {
+        "collection": "ai_itineraries",
+        "indexes": [
+            {"fields": ["django_user_id", "date"], "unique": True},
+            "django_user_id",
+            "date",
+        ],
+    }
+
+    django_user_id = IntField(required=True)
+    date = StringField(required=True)
+    plan = DictField(default=dict)
+    generated_at = DateTimeField(default=datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.utcnow)
+
+
+class DailyNutritionLog(Document):
+    """Checked meals and manual macro adjustments for one user/date."""
+
+    meta = {
+        "collection": "daily_nutrition_logs",
+        "indexes": [
+            {"fields": ["django_user_id", "date"], "unique": True},
+            "django_user_id",
+            "date",
+        ],
+    }
+
+    django_user_id = IntField(required=True)
+    date = StringField(required=True)
+    meals = DictField(default=dict)
+    manual = DictField(default=dict)
+    updated_at = DateTimeField(default=datetime.utcnow)
+
 class Notification(Document):
     """Stores user notifications (e.g., favorite food alerts)."""
     meta = {"collection": "notifications", "indexes": ["django_user_id", "created_at"]}

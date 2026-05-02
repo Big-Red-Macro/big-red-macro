@@ -30,7 +30,7 @@
                </div>
                <input
                  v-model="selectedDate"
-                 @change="generatePlan"
+                 @change="loadSelectedDate"
                  type="date"
                  class="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm font-semibold text-white outline-none transition focus:border-red-400 lg:w-auto"
                />
@@ -94,9 +94,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMainStore } from '../stores/mainStore'
+import { useNutritionStore } from '@/stores/nutrition'
 import MealTimeline from '../components/MealTimeline.vue'
 
 const store = useMainStore()
+const nutrition = useNutritionStore()
 const route = useRoute()
 const selectedDate = ref(route.query.date || toLocalDateInput(new Date()))
 
@@ -127,19 +129,28 @@ const selectedDateLabel = computed(() => {
 })
 
 onMounted(async () => {
+  await nutrition.setActiveDate(selectedDate.value)
   await store.checkCalendarStatus()
-  if (store.isConnectedToCalendar && store.itinerary?.itinerary_date !== selectedDate.value) {
-    store.generateMealPlan(selectedDate.value)
+  if (store.isConnectedToCalendar) {
+    await store.loadSavedItinerary(selectedDate.value)
   }
 })
 
-const generatePlan = () => {
-  store.generateMealPlan(selectedDate.value)
+const generatePlan = async () => {
+  await nutrition.clearDay(selectedDate.value)
+  await nutrition.setActiveDate(selectedDate.value)
+  await store.generateMealPlan(selectedDate.value)
+  await nutrition.loadDay(selectedDate.value)
 }
 
-const selectDay = (date) => {
+const loadSelectedDate = async () => {
+  await nutrition.setActiveDate(selectedDate.value)
+  await store.loadSavedItinerary(selectedDate.value)
+}
+
+const selectDay = async (date) => {
   selectedDate.value = date
-  generatePlan()
+  await loadSelectedDate()
 }
 
 const connectCalendar = async () => {

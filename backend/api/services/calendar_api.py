@@ -13,10 +13,52 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "mock_client_id")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "mock_client_secret")
 
 DEFAULT_FREE_TIME_BLOCKS = [
-    {"start": "08:00", "end": "10:00", "duration_minutes": 120, "source": "fallback"},
-    {"start": "12:00", "end": "14:00", "duration_minutes": 120, "source": "fallback"},
-    {"start": "17:30", "end": "20:00", "duration_minutes": 150, "source": "fallback"},
+    {"start": "08:00", "end": "10:00", "duration_minutes": 120, "source": "fallback", "predicted_area": "Central"},
+    {"start": "12:00", "end": "14:00", "duration_minutes": 120, "source": "fallback", "predicted_area": "Central"},
+    {"start": "17:30", "end": "20:00", "duration_minutes": 150, "source": "fallback", "predicted_area": "West"},
 ]
+
+AREA_KEYWORDS = {
+    "North": [
+        "north", "rpcc", "robert purcell", "morrison hall", "appel", "balch",
+        "risley", "donlon", "ckb", "toni morrison hall", "high rise",
+    ],
+    "West": [
+        "west", "becker", "bethe", "keeton", "rose", "cook house",
+        "alice cook", "noyes", "willard straight",
+    ],
+    "Central": [
+        "central", "statler", "uris", "olin", "gates", "duffield", "rhodes",
+        "klarman", "goldwin smith", "rockefeller", "baker lab", "malott",
+        "kennedy", "mann", "cornell health", "sage", "barton", "teagle",
+        "okenshields", "trillium", "engineering quad", "arts quad",
+    ],
+}
+
+
+def infer_campus_area(text: str) -> str:
+    normalized = (text or "").lower()
+    for area, keywords in AREA_KEYWORDS.items():
+        if any(keyword in normalized for keyword in keywords):
+            return area
+    return ""
+
+
+def event_location_text(event: dict) -> str:
+    return " ".join(
+        str(value)
+        for value in [event.get("location"), event.get("summary")]
+        if value
+    )
+
+
+def predicted_area(previous_event: dict = None, next_event: dict = None) -> str:
+    # Prefer the event right before the meal break: that is where the user likely starts.
+    for event in [previous_event, next_event]:
+        area = infer_campus_area(event_location_text(event or {}))
+        if area:
+            return area
+    return "Central"
 
 def get_client_config():
     return {
@@ -112,32 +154,49 @@ def get_free_time_blocks(token_dict: dict, day_date: datetime.date = None):
             
             start_dt = datetime.datetime.fromisoformat(start.replace('Z', '+00:00'))
             end_dt = datetime.datetime.fromisoformat(end.replace('Z', '+00:00'))
-            busy_blocks.append((start_dt, end_dt))
+            busy_blocks.append({
+                "start": start_dt,
+                "end": end_dt,
+                "summary": e.get("summary", ""),
+                "location": e.get("location", ""),
+            })
         
-        busy_blocks.sort(key=lambda x: x[0])
+        busy_blocks.sort(key=lambda x: x["start"])
         merged_busy = []
         for b in busy_blocks:
             if not merged_busy:
                 merged_busy.append(b)
             else:
                 last_b = merged_busy[-1]
-                if b[0] <= last_b[1]:
-                    merged_busy[-1] = (last_b[0], max(last_b[1], b[1]))
+                if b["start"] <= last_b["end"]:
+                    merged_busy[-1] = {
+                        **last_b,
+                        "end": max(last_b["end"], b["end"]),
+                        "summary": last_b.get("summary") or b.get("summary", ""),
+                        "location": last_b.get("location") or b.get("location", ""),
+                    }
                 else:
                     merged_busy.append(b)
         
         gaps = []
         current_time = start_of_day
+        previous_event = None
         for b in merged_busy:
-            if b[0] > current_time:
-                gap_duration = (b[0] - current_time).total_seconds() / 60
+            if b["start"] > current_time:
+                gap_duration = (b["start"] - current_time).total_seconds() / 60
                 if gap_duration >= 45: 
                     gaps.append({
                         "start": current_time.strftime("%H:%M"),
-                        "end": b[0].strftime("%H:%M"),
-                        "duration_minutes": gap_duration
+                        "end": b["start"].strftime("%H:%M"),
+                        "duration_minutes": gap_duration,
+                        "previous_event": previous_event.get("summary", "") if previous_event else "",
+                        "previous_location": previous_event.get("location", "") if previous_event else "",
+                        "next_event": b.get("summary", ""),
+                        "next_location": b.get("location", ""),
+                        "predicted_area": predicted_area(previous_event, b),
                     })
-            current_time = max(current_time, b[1])
+            current_time = max(current_time, b["end"])
+            previous_event = b
         
         if current_time < end_of_day:
             gap_duration = (end_of_day - current_time).total_seconds() / 60
@@ -145,7 +204,12 @@ def get_free_time_blocks(token_dict: dict, day_date: datetime.date = None):
                 gaps.append({
                     "start": current_time.strftime("%H:%M"),
                     "end": end_of_day.strftime("%H:%M"),
-                    "duration_minutes": gap_duration
+                    "duration_minutes": gap_duration,
+                    "previous_event": previous_event.get("summary", "") if previous_event else "",
+                    "previous_location": previous_event.get("location", "") if previous_event else "",
+                    "next_event": "",
+                    "next_location": "",
+                    "predicted_area": predicted_area(previous_event, None),
                 })
                 
         return gaps
